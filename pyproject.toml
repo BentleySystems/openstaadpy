@@ -1,0 +1,57 @@
+# Defines the build system requirements for the project.
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Core project metadata following PEP 621 standards.
+[project]
+name = "openstaadpy"
+# The version is now read dynamically. See [tool.setuptools.dynamic] below.
+dynamic = ["version"]
+description = "A Python library that provides seamless access to the power of STAAD.Pro through the OpenSTAAD API."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.7"
+license = "MIT"
+license-files = ["LICENSE.md"]
+
+# Author details.
+authors = [
+  { name="Bentley Systems, Inc." },
+]
+
+# Keywords for package discovery on PyPI.
+keywords = ["STAAD.Pro", "OpenSTAAD", "automation", "structural-engineering", "COM", "STAAD"]
+
+# PyPI classifiers to help users find the project.
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+
+# Runtime dependencies required by the package.
+dependencies = [
+    "comtypes",
+]
+
+[project.optional-dependencies]
+docs = ["sphinx", "sphinx-rtd-theme", "sphinx-book-theme", "sphinx-copybutton", "myst-parser"]
+dev = ["pytest", "black", "flake8", "ruff>=0.11"]
+
+[project.urls]
+Homepage = "https://github.com/BentleySystems/openstaadpy"
+Repository = "https://github.com/BentleySystems/openstaadpy"
+
+# --- Tool-specific configurations ---
+
+# Configuration for setuptools to find your package source code.
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openstaadpy*"]
+
+# Configuration for dynamically reading the version from a file.
+[tool.setuptools.dynamic]
+version = { attr = "openstaadpy._version.__version__" }

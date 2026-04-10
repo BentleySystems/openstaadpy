@@ -1,0 +1,40 @@
+# This CODEOWNERS file follows the format of Github's CODEOWNERS
+#   Documentation for reference, https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+
+# This is a comment.
+# Each line is a file pattern followed by one or more owners.
+
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# the default owner will be requested for review when someone opens a pull request.
+
+* @DhimanBanerjee
+
+# GitHub configuration
+.github/                        @DhimanBanerjee
+
+# Git and build configuration
+.gitignore                      @DhimanBanerjee
+pyproject.toml                  @DhimanBanerjee
+setup.py                        @DhimanBanerjee
+MANIFEST.in                     @DhimanBanerjee
+
+# Main package source code
+/openstaadpy/                   @DhimanBanerjee
+
+#documentation
+/docs/                          @DhimanBanerjee
+
+README.md                       @DhimanBanerjee
+
+# Examples
+/Examples/                      @DhimanBanerjee
+
+# Legal and community files
+LICENSE.md                      @DhimanBanerjee
+COPYRIGHT.md                    @DhimanBanerjee
+SECURITY.md                     @DhimanBanerjee
+CONTRIBUTING.md                 @DhimanBanerjee
+
+
+# These are at the end to override all previous reviews

@@ -1,0 +1,26 @@
+# Include essential top-level files
+include README.md
+include LICENSE.md
+include COPYRIGHT.md
+include setup.py
+include pyproject.toml
+
+# Recursively include the main package source
+recursive-include openstaadpy *.py *.pyi
+
+# Recursively include documentation
+recursive-include docs *
+
+# Exclude common unwanted files and directories globally
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .git*
+global-exclude .vscode*
+global-exclude .vs*
+global-exclude .pytest_cache*
+
+# Prune (remove) entire directories that should not be in the distribution
+prune build
+prune dist
+prune openstaadpy.egg-info
