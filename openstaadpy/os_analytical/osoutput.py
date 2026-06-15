@@ -2,7 +2,7 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .oserrors import raise_os_error_if_error_code
+from .oserrors import OsErrorBase, raise_os_error_if_error_code
 from .openStaadHelper import (
     create_bstr,
     create_variant_float,
@@ -123,8 +123,8 @@ class OSOutput:
         unit = create_bstr()
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForDimension(refUnit)
-        if not result:
-            raise_os_error_if_error_code(-1)
+        if result < 0:
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForSectDimension(self):
@@ -148,7 +148,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForSectDimension(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForSectArea(self):
@@ -172,7 +172,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForSectArea(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForSectInertia(self):
@@ -196,7 +196,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForSectInertia(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForSectModulus(self):
@@ -220,7 +220,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForSectModulus(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForDensity(self):
@@ -244,7 +244,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForDensity(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForDisplacement(self):
@@ -268,7 +268,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForDisplacement(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForRotation(self):
@@ -292,7 +292,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForRotation(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForForce(self):
@@ -316,7 +316,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForForce(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForMoment(self):
@@ -340,7 +340,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForMoment(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForDistForce(self):
@@ -364,7 +364,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForDistForce(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForDistMoment(self):
@@ -388,7 +388,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForDistMoment(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetOutputUnitForStress(self):
@@ -412,7 +412,7 @@ class OSOutput:
         refUnit = make_byref(unit)
         result = self._output.GetOutputUnitForStress(refUnit)
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return unit.value
 
     def GetNodeDisplacements(self, nodeNo: int, loadCaseNo: int):
@@ -630,7 +630,7 @@ class OSOutput:
         >>>
         >>> plateCenterStressesAndMoments = staad_obj.Output.GetAllPlateCenterStressesAndMoments(plateList[0], loadCases[0])
         """
-        vt_ForcesOrMoments = make_safe_array_double(7)
+        vt_ForcesOrMoments = make_safe_array_double(8)
         re_ForcesOrMoments = make_variant_vt_ref(
             vt_ForcesOrMoments, automation.VT_ARRAY | automation.VT_R8
         )
@@ -842,8 +842,6 @@ class OSOutput:
         -------
         float
             Returns the critical steel design ratio.
-            Returns -999 if analysis is performed but the member is not designed.
-            Returns -1 if analysis is not performed.
 
         Example
         -------
@@ -1549,9 +1547,6 @@ class OSOutput:
         -------
         int
             Returns Load Step value.
-            Returns -1 General error.
-            Returns -8002 Load Case nLC not found.
-            Returns -9911 Nonlinear result set is not available.
 
 
         Example
@@ -1564,7 +1559,10 @@ class OSOutput:
         >>>
         >>> load_step_value = staad_obj.Output.GetNLLoadStep(load_cases[0])
         """
-        return int(self._output.GetNLLoadStep(loadCaseNo))
+        retVal = self._output.GetNLLoadStep(loadCaseNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return int(retVal)
 
     def GetNLNodeDisplacements(self, nodeNo: int, loadCaseNo: int, loadStep: int):
         """
@@ -2417,7 +2415,7 @@ class OSOutput:
             load_case, node_no, dof_no, response_type, at_time, ref_response
         )
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return ref_response[0], result
 
     def GetTimeHistoryResponse(
@@ -2556,8 +2554,13 @@ class OSOutput:
             ref_responseMin,
             ref_timeMin,
         )
-        if result < 1:
-            raise_os_error_if_error_code(-1)
+        if result < 0:
+            raise_os_error_if_error_code(result)
+        if result == 0:
+            raise OsErrorBase(
+                "No time history response data available to determine min/max values.",
+                -1,
+            )
         return ref_responseMax[0], ref_timeMax[0], ref_responseMin[0], ref_timeMin[0]
 
     def GetMemberSteelDesignResults(self, beamNo: int):
@@ -2620,7 +2623,7 @@ class OSOutput:
             ref_klbyr,
         )
         if result < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(result)
         return (
             designcode.value,
             designstatus.value,

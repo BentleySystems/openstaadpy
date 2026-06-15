@@ -40,6 +40,15 @@ class OsUnableToCreateProp(OsErrorBase):
         super().__init__("Unable to create property.", 0)
 
 
+class OsInvalidModelPath(OsErrorBase):
+    """
+    Raised when an invalid model path is provided.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid model path.", -2)
+
+
 class OsInvalidArgument(OsErrorBase):
     """
     Raised when an invalid argument is provided to an OpenSTAAD function.
@@ -47,6 +56,15 @@ class OsInvalidArgument(OsErrorBase):
 
     def __init__(self):
         super().__init__("Invalid argument.", -100)
+
+
+class OsModelNotOpened(OsErrorBase):
+    """
+    Raised when a STAAD model is not opened.
+    """
+
+    def __init__(self):
+        super().__init__("STAAD model is not opened.", -101)
 
 
 class OsMultidimArrayExpected(OsErrorBase):
@@ -110,6 +128,27 @@ class OsIntegerExpected(OsErrorBase):
 
     def __init__(self):
         super().__init__("Integer value expected.", -113)
+
+
+class OsOleException(OsErrorBase):
+    """
+    Raised when an OLE exception occurs.
+    """
+
+    def __init__(self):
+        super().__init__("OLE exception occurred.", -114)
+
+
+class OsLicenseNotSupported(OsErrorBase):
+    """
+    Raised when the license does not support OpenSTAAD Professional functions.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "License does not include support for OpenSTAAD Professional functions.",
+            -115,
+        )
 
 
 class OsArraySizeLessThanReqd(OsErrorBase):
@@ -229,6 +268,15 @@ class OsNoBeamSelected(OsErrorBase):
         super().__init__("No beam selected.", -3005)
 
 
+class OsInvalidMemberNo(OsErrorBase):
+    """
+    Raised when an invalid member number ID is provided.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid member number ID(s).", -3006)
+
+
 # Plate Errors
 
 
@@ -334,6 +382,15 @@ class OsInvalidPropRef(OsErrorBase):
         super().__init__("Invalid property reference.", -6001)
 
 
+class OsLibErrorPropAssign(OsErrorBase):
+    """
+    Raised when a library error occurs while assigning a property.
+    """
+
+    def __init__(self):
+        super().__init__("Library error: property assign.", -6002)
+
+
 class OsLibErrorCreateProp(OsErrorBase):
     """
     Raised when a library error occurs while creating a property.
@@ -388,6 +445,126 @@ class OsLibErrorBetaAssign(OsErrorBase):
         super().__init__("Library error assigning beta.", -6009)
 
 
+class OsLibErrorCreateTrussSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a member truss specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create member truss specification.", -6010
+        )
+
+
+class OsLibErrorCreateInactiveSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a member inactive specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create member inactive specification.", -6011
+        )
+
+
+class OsLibErrorCreateTensionSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a member tension specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create member tension specification.", -6012
+        )
+
+
+class OsLibErrorCreateCompressionSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a member compression specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create member compression specification.", -6013
+        )
+
+
+class OsLibErrorCreateIgnoreStiffSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating an ignore stiffness specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create ignore stiffness specification.", -6014
+        )
+
+
+class OsLibErrorCreateCableSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a member cable specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create member cable specification.", -6015
+        )
+
+
+class OsLibErrorAssignSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while assigning a specification.
+    """
+
+    def __init__(self):
+        super().__init__("Library error: unable to assign specification.", -6017)
+
+
+class OsLibErrorCreatePlaneStressSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating an element plane stress specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create element plane stress specification.", -6018
+        )
+
+
+class OsLibErrorCreateInplaneRotnSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating an element inplane rotation specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create element inplane rotation specification.",
+            -6019,
+        )
+
+
+class OsLibErrorCreateReleaseSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a member release specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create member release specification.", -6020
+        )
+
+
+class OsLibErrorCreateElementNodeReleaseSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating an element node release specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create element node release specification.", -6021
+        )
+
+
 class OsNoPropAttached(OsErrorBase):
     """
     Raised when no property is attached to an element.
@@ -415,6 +592,35 @@ class OsNoPropDefined(OsErrorBase):
         super().__init__("No property defined.", -6025)
 
 
+class OsInvalidMemberElementRef(OsErrorBase):
+    """
+    Raised when an invalid member or element reference is provided.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid member/element reference.", -6026)
+
+
+class OsNoOffsetInfo(OsErrorBase):
+    """
+    Raised when no offset information is found for the node index.
+    """
+
+    def __init__(self):
+        super().__init__("No offset information found for the node index.", -6027)
+
+
+class OsLibErrorCreateControlDependentSpec(OsErrorBase):
+    """
+    Raised when a library error occurs while creating a control/dependent specification.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Library error: unable to create control/dependent specification.", -6029
+        )
+
+
 class OsUptCreateFailed(OsErrorBase):
     """
     Raised when UPT (User Provided Table) creation fails.
@@ -440,6 +646,15 @@ class OsUptSectionExists(OsErrorBase):
 
     def __init__(self):
         super().__init__("UPT section already exists.", -6045)
+
+
+class OsUptNotFound(OsErrorBase):
+    """
+    Raised when a UPT (User Provided Table) cannot be found.
+    """
+
+    def __init__(self):
+        super().__init__("Cannot find UPT. Unknown table type specified.", -6036)
 
 
 # Group Errors
@@ -480,6 +695,15 @@ class OsCreateLoadFailed(OsErrorBase):
         super().__init__("Create load failed.", -8004)
 
 
+class OsLibErrorAssignLoad(OsErrorBase):
+    """
+    Raised when a library error occurs while assigning a load.
+    """
+
+    def __init__(self):
+        super().__init__("Library error: unable to assign load.", -8005)
+
+
 class OsLoadExists(OsErrorBase):
     """
     Raised when a load already exists in the model.
@@ -496,6 +720,15 @@ class OsSeismicCodeNotFound(OsErrorBase):
 
     def __init__(self):
         super().__init__("Seismic code not found.", -8034)
+
+
+class OsInvalidSeismicDirection(OsErrorBase):
+    """
+    Raised when an invalid seismic direction is provided.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid seismic direction.", -8038)
 
 
 class OsInvalidLoadDefId(OsErrorBase):
@@ -544,6 +777,34 @@ class OsNoGnlResultSet(OsErrorBase):
         super().__init__("No GNL result set.", -9911)
 
 
+class OsResultNotFound(OsErrorBase):
+    """
+    Raised when a result is not found or could not be loaded.
+    """
+
+    def __init__(self):
+        super().__init__("Result is not found or could not be loaded.", -9915)
+
+
+# Export Errors
+class OsExportSuccessWithWarnings(OsErrorBase):
+    """
+    Raised when an export is successful but with warnings.
+    """
+
+    def __init__(self):
+        super().__init__("Export is successful with warnings.", -14501)
+
+
+class OsExportFailed(OsErrorBase):
+    """
+    Raised when an export has failed.
+    """
+
+    def __init__(self):
+        super().__init__("Export has failed.", -14502)
+
+
 # Miscellaneous
 class OsMemberUpdated(OsErrorBase):
     """
@@ -570,7 +831,9 @@ def raise_os_error_if_error_code(code):
     """
     code_map = {
         -1: OsError,
+        -2: OsInvalidModelPath,
         -100: OsInvalidArgument,
+        -101: OsModelNotOpened,
         -106: OsMultidimArrayExpected,
         -107: OsArrayExpected,
         -108: OsArraySizeSmall,
@@ -578,6 +841,8 @@ def raise_os_error_if_error_code(code):
         -110: OsNoBeamPlateSolidSelected,
         -112: OsDoubleExpected,
         -113: OsIntegerExpected,
+        -114: OsOleException,
+        -115: OsLicenseNotSupported,
         -125: OsArraySizeLessThanReqd,
         -1003: OsFileAlreadyExists,
         -2001: OsNodeNotFound,
@@ -589,6 +854,7 @@ def raise_os_error_if_error_code(code):
         -3003: OsIdenticalBeamAlreadyExists,
         -3004: OsErrorAddBeam,
         -3005: OsNoBeamSelected,
+        -3006: OsInvalidMemberNo,
         -4001: OsPlateNotFound,
         -4004: OsErrorAddPlate,
         -4005: OsNoPlateSelected,
@@ -599,31 +865,52 @@ def raise_os_error_if_error_code(code):
         -5004: OsErrorAddSolid,
         -5005: OsNoSolidSelected,
         -5603: OsMeshNotFound,
+        -5701: OsPmemberNotFound,
         -6001: OsInvalidPropRef,
+        -6002: OsLibErrorPropAssign,
         -6003: OsLibErrorCreateProp,
         -6004: OsProfileNotFound,
         -6005: OsProfileDataNotFound,
         -6006: OsInvalidSectionType,
         -6008: OsInvalidAssignType,
         -6009: OsLibErrorBetaAssign,
+        -6010: OsLibErrorCreateTrussSpec,
+        -6011: OsLibErrorCreateInactiveSpec,
+        -6012: OsLibErrorCreateTensionSpec,
+        -6013: OsLibErrorCreateCompressionSpec,
+        -6014: OsLibErrorCreateIgnoreStiffSpec,
+        -6015: OsLibErrorCreateCableSpec,
+        -6017: OsLibErrorAssignSpec,
+        -6018: OsLibErrorCreatePlaneStressSpec,
+        -6019: OsLibErrorCreateInplaneRotnSpec,
+        -6020: OsLibErrorCreateReleaseSpec,
+        -6021: OsLibErrorCreateElementNodeReleaseSpec,
         -6022: OsNoPropAttached,
         -6023: OsMaterialNotFound,
         -6025: OsNoPropDefined,
+        -6026: OsInvalidMemberElementRef,
+        -6027: OsNoOffsetInfo,
+        -6029: OsLibErrorCreateControlDependentSpec,
         -6031: OsUptCreateFailed,
         -6032: OsAddUptSectionFailed,
+        -6036: OsUptNotFound,
         -6045: OsUptSectionExists,
         -7001: OsGroupAlreadyExists,
         -8001: OsInvalidLoadDirection,
         -8002: OsLoadCaseNotFound,
         -8004: OsCreateLoadFailed,
+        -8005: OsLibErrorAssignLoad,
         -8029: OsLoadExists,
         -8034: OsSeismicCodeNotFound,
+        -8038: OsInvalidSeismicDirection,
         -8039: OsInvalidLoadDefId,
         -8040: OsInvalidLoadCombName,
         -8041: OsInvalidLoadCombCategory,
         -9004: OsBeamForcesNotLoaded,
         -9911: OsNoGnlResultSet,
-        -5701: OsPmemberNotFound,
+        -9915: OsResultNotFound,
+        -14501: OsExportSuccessWithWarnings,
+        -14502: OsExportFailed,
     }
     error_cls = code_map.get(code, None)
     if error_cls is not None:
