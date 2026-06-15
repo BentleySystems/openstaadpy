@@ -92,7 +92,9 @@ class OSSupport:
         if isinstance(NodeIDs, int):
             NodeIDs = [NodeIDs]
         safe_list = make_safe_array_long_input(NodeIDs)
-        self._support.AssignSupportToNode(safe_list, SupportID)
+        retVal = self._support.AssignSupportToNode(safe_list, SupportID)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def CreateSupportFixed(self):
         """
@@ -102,7 +104,6 @@ class OSSupport:
         -------
         int
             Support reference number ID.
-            -1 indicates General Error.
 
         Examples
         --------
@@ -110,7 +111,10 @@ class OSSupport:
         >>> staad_obj = os_analytical.connect()
         >>> count = staad_obj.Support.CreateSupportFixed()
         """
-        return self._support.CreateSupportFixed()
+        retVal = self._support.CreateSupportFixed()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateSupportPinned(self):
         """
@@ -120,7 +124,6 @@ class OSSupport:
         -------
         int
             Support reference number ID.
-            -1 indicates General Error.
 
         Examples
         --------
@@ -128,7 +131,10 @@ class OSSupport:
         >>> staad_obj = os_analytical.connect()
         >>> count = staad_obj.Support.CreateSupportPinned()
         """
-        return self._support.CreateSupportPinned()
+        retVal = self._support.CreateSupportPinned()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateSupportFixedBut(self, ReleaseSpec: list, SpringSpec: list):
         """
@@ -152,7 +158,10 @@ class OSSupport:
             release, automation.VT_ARRAY | automation.VT_R8
         )
         spring_vt = make_variant_vt_ref(spring, automation.VT_ARRAY | automation.VT_R8)
-        return self._support.CreateSupportFixedBut(release_vt, spring_vt)
+        retVal = self._support.CreateSupportFixedBut(release_vt, spring_vt)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetSupportCount(self):
         """
@@ -191,7 +200,9 @@ class OSSupport:
         node_list = make_variant_vt_ref(
             safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        self._support.GetSupportNodes(node_list)
+        retVal = self._support.GetSupportNodes(node_list)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return node_list[0]
 
     def GetSupportType(self, nodeNo: int):
@@ -214,7 +225,10 @@ class OSSupport:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Support.GetSupportType(1)
         """
-        return self._support.GetSupportType(nodeNo)
+        retVal = self._support.GetSupportType(nodeNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetSupportInformation(self, nodeNo: int):
         """
@@ -243,6 +257,8 @@ class OSSupport:
         )
         spring_vt = make_variant_vt_ref(spring, automation.VT_ARRAY | automation.VT_R8)
         stype = self._support.GetSupportInformation(nodeNo, release_vt, spring_vt)
+        if stype < 0:
+            raise_os_error_if_error_code(stype)
         return stype, list(release_vt[0]), list(spring_vt[0])
 
     def GetSupportUniqueID(self, supportNo: int):
@@ -336,7 +352,10 @@ class OSSupport:
         >>> status = staad_obj.Support.DeleteSupport(2)
         >>> print(status)
         """
-        return self._support.DeleteSupport(supportNo)
+        retVal = self._support.DeleteSupport(supportNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetSupportName(self, supportNo: int):
         """
@@ -823,7 +842,7 @@ class OSSupport:
         """
         retval = self._support.GetPlateMatSupportId(plateMatIndex)
         if retval < 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(retval)
         return retval
 
     def GetPlateMatDetail(self, plateMatNo):

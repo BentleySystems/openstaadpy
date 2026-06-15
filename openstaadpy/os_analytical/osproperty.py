@@ -15,7 +15,7 @@ from .openStaadHelper import (
 )
 from comtypes import automation
 from comtypes import CoInitialize
-from .oserrors import raise_os_error_if_error_code
+from .oserrors import OsErrorBase, raise_os_error_if_error_code
 
 
 class OSProperty:
@@ -249,13 +249,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Status code indicating the result of the operation:
-                - 0 : Success
-                - -106 : BeamNo array dimension error.
-                - -3006 : Invalid member number ID(s).
-                - -6001 : Invalid section The assigned section property ID.
-                - -6002 : Library Error: Property Assign.
+        bool
+            - True if it succeeds
 
         Examples
         --------
@@ -278,7 +273,10 @@ class OSProperty:
         beamId_Array_vt = make_variant_vt_ref(
             beamId_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignBeamProperty(beamId_Array_vt, property_id)
+        retVal = self._property.AssignBeamProperty(beamId_Array_vt, property_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignPlateThickness(self, plate_ids: list, thickness_property_id: int):
         """
@@ -294,15 +292,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Status code indicating the result of the operation:
-                - 0 : Success
-                - -1 : General error.
-                - -106 : Plate number array dimension error.
-                - -113 : Plate number type error (expected int or long).
-                - -4009 : All provided plate numbers are invalid.
-                - -4008 : Some of the plate numbers provided are invalid.
-                - -6001 : The specified thickness property ID is invalid.
+        bool
+            - True if it succeeds
 
         Examples
         --------
@@ -323,7 +314,7 @@ class OSProperty:
         )
         if result < 0:
             raise_os_error_if_error_code(result)
-        return result
+        return result == 0
 
     def AssignMemberSpecToBeam(self, beam_ids: list | int, spec_id: int):
         """
@@ -338,11 +329,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Status code indicating the result of the operation:
-                - 0 : Success
-                - -106 : List of long expected.
-                - -6017 : Library Error: Unable to assign specification.
+        bool
+            - True if it succeeds
 
 
         Examples
@@ -358,7 +346,10 @@ class OSProperty:
         beam_ids_array_vt = make_variant_vt_ref(
             beam_ids_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignMemberSpecToBeam(beam_ids_array_vt, spec_id)
+        retVal = self._property.AssignMemberSpecToBeam(beam_ids_array_vt, spec_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignMaterialToPlate(self, material_name: str, plate_ids: list | int):
         """
@@ -373,13 +364,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Status code indicating the result of the operation:
-                - 0 : Success
-                - -113 : Invalid data type(Long or Int Expected)
-                - -4009 : All the plate numbers are invalid.
-                - -4008 : Some of the plate numbers are invalid.
-                - -6023 : Material not found.
+        bool
+            - True if it succeeds
 
         Examples
         --------
@@ -394,7 +380,10 @@ class OSProperty:
         plate_ids_array_vt = make_variant_vt_ref(
             plate_ids_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignMaterialToPlate(material_name, plate_ids_array_vt)
+        retVal = self._property.AssignMaterialToPlate(material_name, plate_ids_array_vt)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignMaterialToMember(self, material_name: str, member_ids: list):
         """
@@ -439,9 +428,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns id of the created plate thickness property if successful.
-            Returns -1 if it encounters an issue regarding the thickness list.
-            Returns -6003 if it is unable to create property (library error).
+            id of the created plate thickness property if successful.
 
         Examples
         --------
@@ -454,7 +441,10 @@ class OSProperty:
             safe_thickness_array, automation.VT_ARRAY | automation.VT_R8
         )
 
-        return self._property.CreatePlateThicknessProperty(thickness_array_vt)
+        retVal = self._property.CreatePlateThicknessProperty(thickness_array_vt)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateBeamPropertyFromTable(
         self,
@@ -671,11 +661,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the ID of the created member release specification if successful.\n
-            Returns -106 if list of long for dof_values and list of double for spring_constant_values expected.\n
-            Returns -108 if array size is smaller than expected (size should be 6).\n
-            Returns -6020 if library error: unable to create member release specification.
-
+            Returns the ID of the created member release specification if successful.
 
         Examples
         --------
@@ -1067,8 +1053,8 @@ class OSProperty:
 
         Returns
         -------
-        Int
-            Returns 0 if Ok else returns -1 if it fails.
+        bool
+            True if removes material
 
         Examples
         --------
@@ -1077,7 +1063,10 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMaterialFromBeam(beam_ids[0])
         """
-        return self._property.RemoveMaterialFromBeam(beam_id)
+        retVal = self._property.RemoveMaterialFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveMaterialFromPlate(self, plate_ids: list | int):
         """
@@ -1181,12 +1170,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns assigned section property ID if successful.\n
-            Else returns a status code indicating the result of the operation:
-                - 0 : Library Error: Unable to create property.
-                - -6004 : Section is not found in profile database.
-                - -6005 : Section data for a section is not found.
-                - -6006 : Invalid section type.
+            Returns assigned section property ID if successful.
 
         Examples
         --------
@@ -1194,9 +1178,14 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateChannelPropertyFromTable(10, "ISMC200", 0, 0.0)
         """
-        return self._property.CreateChannelPropertyFromTable(
+        retVal = self._property.CreateChannelPropertyFromTable(
             country_code, section_name, spec_type, additional_spec_1
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return retVal
 
     def CreateTubePropertyFromTable(
         self,
@@ -1310,12 +1299,7 @@ class OSProperty:
         Returns
         -------
         int
-            Status code indicating the result of the operation:
-                - 0 : Library Error: Unable to create property.
-                - -6004 : Section is not found in profile database.
-                - -6005 : Section data for a section is not found.
-                - -6006 : Invalid section type.
-
+            Returns assigned section property ID if successful.
 
         Examples
         --------
@@ -1323,9 +1307,14 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateTubePropertyFromTable(10, "TUB30302.6", 0, 0.0, 0.0, 0.0)
         """
-        return self._property.CreateTubePropertyFromTable(
+        retVal = self._property.CreateTubePropertyFromTable(
             country_code, section_name, spec_type, add_spec_1, add_spec_2, add_spec_3
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return retVal
 
     def CreatePipePropertyFromTable(
         self,
@@ -1419,12 +1408,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns assigned section property ID if successful.\n
-            Else returns a status code indicating the result of the operation:
-                - 0 : Library Error: Unable to create property.
-                - -6004 : Section is not found in profile database.
-                - -6005 : Section data for a section is not found.
-                - -6006 : Invalid section type.
+            Returns assigned section property ID if successful.
 
         Examples
         --------
@@ -1432,9 +1416,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreatePipePropertyFromTable(17, "0.500PipeX5", 0, 0.0, 0.0)
         """
-        return self._property.CreatePipePropertyFromTable(
+        retVal = self._property.CreatePipePropertyFromTable(
             country_code, section_name, spec_type, additional_spec_1, additional_spec_2
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreatePrismaticRectangleProperty(
         self, depth_along_y_axis: float, depth_along_z_axis: float
@@ -1590,11 +1577,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.\n
-            Else returns status code indicating the result of the operation:
-                - 0 : Library Error: Unable to create property.
-                - -106 : One dimensional array of double expected.
-                - -108 : Array size is smaller than expected.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -1606,7 +1589,12 @@ class OSProperty:
         vt_varfaProperties = make_variant_vt_ref(
             safe_varfaProperties, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreatePrismaticGeneralProperty(vt_varfaProperties)
+        retVal = self._property.CreatePrismaticGeneralProperty(vt_varfaProperties)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return retVal
 
     def CreateTaperedIProperty(self, property_value_list: list):
         """
@@ -1637,11 +1625,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.\n
-            Else returns status code indicating the result of the operation:
-                - 0 : Library Error: Unable to create property.
-                - -106 : List of double expected.
-                - -108 : Length of list is smaller than expected.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -1653,7 +1637,12 @@ class OSProperty:
         vt_varfaProperties = make_variant_vt_ref(
             safe_varfaProperties, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreateTaperedIProperty(vt_varfaProperties)
+        retVal = self._property.CreateTaperedIProperty(vt_varfaProperties)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return retVal
 
     def CreateTaperedTubeProperty(
         self,
@@ -1694,10 +1683,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.\n
-            Else returns status code indicating the result of the operation:
-                - 0 : Library Error of being unable to create property.
-                - -6008 : Invalid assign profile type.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -1705,12 +1691,17 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateTaperedTubeProperty(0, 0.5, 0.4, 0.01)
         """
-        return self._property.CreateTaperedTubeProperty(
+        retVal = self._property.CreateTaperedTubeProperty(
             tube_type,
             start_member_section_depth,
             end_member_section_depth,
             section_thickness,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return retVal
 
     def CreateAssignProfileProperty(self, profile_type: int):
         """
@@ -1737,10 +1728,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.\n
-            Else returns status code indicating the result of the operation:
-                - 0 : Library Error of being unable to create property.
-                - -6008 : Invalid assign profile type.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -1748,7 +1736,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateAssignProfileProperty(2)
         """
-        return self._property.CreateAssignProfileProperty(profile_type)
+        retVal = self._property.CreateAssignProfileProperty(profile_type)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return retVal
 
     def AssignBetaAngle(self, beam_ids: list, beta_angle: float):
         """
@@ -1763,12 +1756,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Status code indicating the result of the operation:
-                - 1 : OK
-                - 0 : General error
-                - 0 : List of long expected.
-                - 0 : Library Error of being unable to assign BETA angle.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -1795,7 +1784,6 @@ class OSProperty:
         -------
         int
             Returns the assigned specification number ID.
-            Else returns status code -6010 for unable to create MEMBER TRUSS specification (Library Error).
 
         Examples
         --------
@@ -1803,7 +1791,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateMemberTrussSpec()
         """
-        return self._property.CreateMemberTrussSpec()
+        retVal = self._property.CreateMemberTrussSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateMemberInactiveSpec(self):
         """
@@ -1812,8 +1803,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code '-6011' if it encounters library error(Unable to create MEMBER INACTIVE specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1821,7 +1811,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateMemberInactiveSpec()
         """
-        return self._property.CreateMemberInactiveSpec()
+        retVal = self._property.CreateMemberInactiveSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateMemberTensionSpec(self):
         """
@@ -1830,8 +1823,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code '-6012' if it encounters library error (Unable to create MEMBER TENSION specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1839,7 +1831,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateMemberTensionSpec()
         """
-        return self._property.CreateMemberTensionSpec()
+        retVal = self._property.CreateMemberTensionSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateMemberCompressionSpec(self):
         """
@@ -1848,8 +1843,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code '-6013' if library error (Unable to create MEMBER COMPRESSION specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1857,7 +1851,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateMemberCompressionSpec()
         """
-        return self._property.CreateMemberCompressionSpec()
+        retVal = self._property.CreateMemberCompressionSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateMemberIgnoreStiffSpec(self):
         """
@@ -1866,8 +1863,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code '-6014' if library error (Unable to create IGNORE STIFFNESS specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1875,7 +1871,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateMemberIgnoreStiffSpec()
         """
-        return self._property.CreateMemberIgnoreStiffSpec()
+        retVal = self._property.CreateMemberIgnoreStiffSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateMemberCableSpec(self, tension_or_unstressed_len: int, spec_value: float):
         """
@@ -1893,8 +1892,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code -6015 if library error (Unable to create MEMBER CABLE specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1902,9 +1900,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateMemberCableSpec(0, 4.5)
         """
-        return self._property.CreateMemberCableSpec(
+        retVal = self._property.CreateMemberCableSpec(
             tension_or_unstressed_len, spec_value
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateElementPlaneStressSpec(self):
         """
@@ -1913,8 +1914,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code '-6018' if library error (Unable to create ELEMENT PLANE STRESS specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1922,7 +1922,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateElementPlaneStressSpec()
         """
-        return self._property.CreateElementPlaneStressSpec()
+        retVal = self._property.CreateElementPlaneStressSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateElementIgnoreInplaneRotnSpec(self):
         """
@@ -1931,8 +1934,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.\n
-            Else returns status code '-6019' if library error (Unable to create ELEMENT INPLANE ROTATION specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -1940,7 +1942,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateElementIgnoreInplaneRotnSpec()
         """
-        return self._property.CreateElementIgnoreInplaneRotnSpec()
+        retVal = self._property.CreateElementIgnoreInplaneRotnSpec()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AssignElementSpecToPlate(self, plate_ids: list, spec_no: int):
         """
@@ -1955,11 +1960,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Status code indicating the result of the operation:
-                - 0 : OK
-                - -106 : List of long expected.
-                - -6017 : Library Error: Unable to assign specification.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -1997,11 +1999,7 @@ class OSProperty:
         Returns
         -------
         int
-            Status code indicating the result of the operation:
-                - 0 : OK
-                - -106 : List of long for dof_release and list of double for factor expected.
-                - -108 : Array size is smaller than expected (size should be 6).
-                - -6020 : Library Error: Unable to create MEMBER RELEASE specification.
+            Returns the specification id if successful.
 
         Examples
         --------
@@ -2017,9 +2015,12 @@ class OSProperty:
         varFactor = make_variant_vt_ref(
             safe_varFactor, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreateMemberPartialReleaseSpec(
+        retVal = self._property.CreateMemberPartialReleaseSpec(
             location, varDOFRelease, varFactor
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateElementNodeReleaseSpec(self, node_id: int, dof_release: list):
         """
@@ -2035,10 +2036,7 @@ class OSProperty:
         Returns
         -------
         int
-            Gives specification id if successful, else gives status code indicating the result of the operation:
-                - -106 : List of long type elements for dof_release parameter expected.
-                - -108 : Array size is smaller than expected (size should be 6).
-                - -6020 : Library Error of being unable to create ELEMENT NODE RELEASE specification.
+            Returns the specification id if successful.
 
         Examples
         --------
@@ -2050,7 +2048,10 @@ class OSProperty:
         dof_release = make_variant_vt_ref(
             safe_varDOFRelease, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.CreateElementNodeReleaseSpec(node_id, dof_release)
+        retVal = self._property.CreateElementNodeReleaseSpec(node_id, dof_release)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetCountryTableNo(self, beam_id: int):
         """
@@ -2064,10 +2065,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the country CODE if successful.\n
-            Else returns status code :
-                - -3001 : It is unable to find member.
-                - -6022 : No property is attached to the member/element.
+            Returns the country CODE if successful.
 
         Examples
         --------
@@ -2090,11 +2088,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the section table number if successful.\n
-            Else returns status code :
-                - -3001 : It is unable to find member.
-                - -6004 : Section not found in profile database.
-                - -6022 : No property is attached to the member/element.
+            Returns the section table number if successful.
 
         Examples
         --------
@@ -2323,7 +2317,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns Beta angle else returns status code '-3001' if it can't find member.
+            Returns Beta angle.
 
         Examples
         --------
@@ -2422,7 +2416,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns country code else returns -6025 if no property is defined in the model.
+            Returns the country code.
 
         Examples
         --------
@@ -2824,10 +2818,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful.\n
-            Returns -106 if list of long expected.\n
-            Returns -6029 if Library Error: Unable to create CONTROL/DEPENDENT specification.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -2844,7 +2836,7 @@ class OSProperty:
         )
         if result < 0:
             raise_os_error_if_error_code(result)
-        return result
+        return result == 0
 
     def CreateIsotropicMaterialProperties(
         self,
@@ -2881,7 +2873,6 @@ class OSProperty:
         int
             Returns 1 if Material is updated as a material with that name was already present.
             Returns 0 if Material is created.
-            Returns -1 if General Error.
 
         Examples
         --------
@@ -2934,7 +2925,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns User Provided Table (UPT) number id else -6031 if it is unable to create UPT table (unknown table type specified).
+            Returns User Provided Table (UPT) number id.
 
         Examples
         --------
@@ -2956,7 +2947,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 'True' if successful else 'False' if general error.
+            Returns 'True' if successful.
 
         Examples
         --------
@@ -3013,10 +3004,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK.\n
-            Returns -6032 if unable to add section stn_name in UPT table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3025,7 +3014,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(1)
         >>> result = staad_obj.Property.AddUPTPropertyWIDEFLANGE(upt_num_id, "VJG20-2",  1.1, 2.0, 1.5, 3.5, 7.2, 4.5, 6.9, 8.2, 1.3, 9.1)
         """
-        return self._property.AddUPTPropertyWIDEFLANGE(
+        retVal = self._property.AddUPTPropertyWIDEFLANGE(
             table_ref_id,
             stn_name,
             cro_sec_area,
@@ -3039,6 +3028,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyCHANNEL(
         self,
@@ -3090,10 +3082,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK.
-            Returns -6032 if unable to add section stn_name in UPT table_reference_id.
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3102,7 +3092,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(2)
         >>> result = staad_obj.Property.AddUPTPropertyCHANNEL(upt_num_id, "VJG20-2", 1.1, 2.0, 1.5, 3.5, 7.2, 4.5, 6.9, 8.2, 1.3, 9.2)
         """
-        return self._property.AddUPTPropertyCHANNEL(
+        retVal = self._property.AddUPTPropertyCHANNEL(
             table_reference_id,
             stn_name,
             cro_sec_area,
@@ -3117,6 +3107,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyANGLE(
         self,
@@ -3153,10 +3146,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK.\n
-            Returns -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3165,7 +3156,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(3)
         >>> status = staad_obj.Property.AddUPTPropertyANGLE(upt_num_id, "UPT_Channel1", 12.32, 5.1, 0.8, 5.64, 1.29, 1.95)
         """
-        return self._property.AddUPTPropertyANGLE(
+        retVal = self._property.AddUPTPropertyANGLE(
             table_reference_id,
             section_name,
             depth_of_angle,
@@ -3175,6 +3166,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyDOUBLEANGLE(
         self,
@@ -3223,10 +3217,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK.\n
-            Returns -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3235,7 +3227,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(4)
         >>> result = staad_obj.Property.AddUPTPropertyDOUBLEANGLE(upt_num_id, "VJG20-2", 1.2, 2.2, 1.5, 4.5, 6.5, 2.3, 7.8, 1.9, 5.7, 6.5)
         """
-        return self._property.AddUPTPropertyDOUBLEANGLE(
+        retVal = self._property.AddUPTPropertyDOUBLEANGLE(
             table_reference_id,
             section_name,
             depth_angle,
@@ -3249,6 +3241,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyTEE(
         self,
@@ -3300,10 +3295,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK.\n
-            Returns -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
 
         Examples
@@ -3313,7 +3306,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(5)
         >>> result = staad_obj.Property.AddUPTPropertyTEE(upt_num_id, "VJG20-2", 1.2, 2.2, 4.5, 6.5, 2.3, 7.8, 11.9, 5.7, 6.5, 7.1, 4.9)
         """
-        return self._property.AddUPTPropertyTEE(
+        retVal = self._property.AddUPTPropertyTEE(
             table_reference_id,
             section_name,
             cross_section_area,
@@ -3328,6 +3321,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyPIPE(
         self,
@@ -3423,10 +3419,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 OK.\n
-            Returns -6032 if unable to add section section_name in upt table_reference_id\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3435,7 +3429,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(7)
         >>> result = staad_obj.Property.AddUPTPropertyTUBE(upt_num_id, "VJG20-2", 1.2, 2.2, 4.5, 6.5, 2.3, 7.8, 11.9, 5.7, 6.5)
         """
-        return self._property.AddUPTPropertyTUBE(
+        retVal = self._property.AddUPTPropertyTUBE(
             table_reference_id,
             section_name,
             cross_section_area,
@@ -3448,6 +3442,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyGENERAL(
         self,
@@ -3515,10 +3512,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 OK.\n
-            Returns -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3527,7 +3522,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(8)
         >>> result = staad_obj.Property.AddUPTPropertyGENERAL(upt_num_id, "VJG20", 4.6, 12.1, 6.1, 11.9, 15.3, 9.4, 5.2, 19.9, 19.5, 8.0, 10.6, 12.7, 13.6, 15.0, 4.3, 14.5)
         """
-        return self._property.AddUPTPropertyGENERAL(
+        retVal = self._property.AddUPTPropertyGENERAL(
             table_reference_id,
             section_name,
             cross_section_area,
@@ -3547,6 +3542,9 @@ class OSProperty:
             warping_constant,
             depth_of_web,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyISECTION(
         self,
@@ -3595,10 +3593,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 OK.\n
-            Returns -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3607,7 +3603,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(9)
         >>> result = staad_obj.Property.AddUPTPropertyISECTION(upt_num_id, "VJG20", 9.2, 15.4, 16.7, 5.2, 19.0, 15.7, 5.1, 18.9, 15.9, 13.9)
         """
-        return self._property.AddUPTPropertyISECTION(
+        retVal = self._property.AddUPTPropertyISECTION(
             table_reference_id,
             section_name,
             depth_of_web,
@@ -3621,6 +3617,9 @@ class OSProperty:
             shear_area_z,
             torsional_constant,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddUPTPropertyPRISMATIC(
         self,
@@ -3663,10 +3662,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 OK.\n
-            Returns -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Returns -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3675,7 +3672,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(10)
         >>> result = staad_obj.Property.AddUPTPropertyPRISMATIC(upt_num_id, "VJG20", 7.2, 2.2, 8.7, 20.7, 7.4, 11.4, 12.8, 9.6)
         """
-        return self._property.AddUPTPropertyPRISMATIC(
+        retVal = self._property.AddUPTPropertyPRISMATIC(
             table_reference_id,
             section_name,
             cross_section_area,
@@ -3687,6 +3684,9 @@ class OSProperty:
             depth_y,
             depth_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemovePropertyFromUPTTable(self, table_reference_id: int, section_name: str):
         """
@@ -3703,8 +3703,6 @@ class OSProperty:
         -------
         int
             Returns 1 if successful.
-            Returns 0 if general error.
-            Returns -100 if invalid table number or section name.
 
         Examples
         --------
@@ -3713,9 +3711,12 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(7)
         >>> result = staad_obj.Property.RemovePropertyFromUPTTable(upt_num_id, "VJG20")
         """
-        return self._property.RemovePropertyFromUPTTable(
+        retVal = self._property.RemovePropertyFromUPTTable(
             table_reference_id, section_name
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateMemberAttribute(self, attribute_name: str, str_Value: str):
         """
@@ -3730,8 +3731,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3739,7 +3740,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateMemberAttribute("MEMBTYPE", "BRACE")
         """
-        return self._property.CreateMemberAttribute(attribute_name, str_Value)
+        retVal = self._property.CreateMemberAttribute(attribute_name, str_Value)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignMemberAttribute(
         self, attribute_name: str, str_Value: str, member_list: list | int
@@ -3758,8 +3762,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3775,9 +3779,12 @@ class OSProperty:
         vt_member_list = make_variant_vt_ref(
             safe_member_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignMemberAttribute(
+        retVal = self._property.AssignMemberAttribute(
             attribute_name, str_Value, vt_member_list
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def DeleteMemberAttribute(self, attribute_name: str, str_Value: str):
         """
@@ -3792,8 +3799,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3801,7 +3808,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.DeleteMemberAttribute("MemberAttribute1", "A string value")
         """
-        return self._property.DeleteMemberAttribute(attribute_name, str_Value)
+        retVal = self._property.DeleteMemberAttribute(attribute_name, str_Value)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def GetMemberCountByAttribute(self, attribute_name: str, str_Value: str):
         """
@@ -3817,7 +3827,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 0 if successful else -1 if general error.
+            Returns the count of matching members.
 
         Examples
         --------
@@ -3825,7 +3835,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetMemberCountByAttribute("MEMBTYPE", "BRACE")
         """
-        return self._property.GetMemberCountByAttribute(attribute_name, str_Value)
+        retVal = self._property.GetMemberCountByAttribute(attribute_name, str_Value)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetMemberListByAttribute(self, attribute_name: str, str_Value: str):
         """
@@ -3876,8 +3889,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3885,7 +3898,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateElementAttribute("MEMBTYPE", "BRACE")
         """
-        return self._property.CreateElementAttribute(attribute_name, str_value)
+        retVal = self._property.CreateElementAttribute(attribute_name, str_value)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignElementAttribute(
         self, attribute_name: str, str_Value: str, element_list: list | int
@@ -3904,8 +3920,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3920,9 +3936,12 @@ class OSProperty:
         vt_element_list = make_variant_vt_ref(
             safe_element_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignElementAttribute(
+        retVal = self._property.AssignElementAttribute(
             attribute_name, str_Value, vt_element_list
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def DeleteElementAttribute(self, attribute_name: str, str_value: str):
         """
@@ -3937,8 +3956,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3946,7 +3965,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.DeleteElementAttribute("MEMBTYPE", "BRACE")
         """
-        return self._property.DeleteElementAttribute(attribute_name, str_value)
+        retVal = self._property.DeleteElementAttribute(attribute_name, str_value)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def GetElementCountByAttribute(self, attribute_name: str, str_value: str):
         """
@@ -3962,7 +3984,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns number of elements in specified attribute if successful else -1 if general error.
+            Returns number of elements in specified attribute.
 
         Examples
         --------
@@ -3970,7 +3992,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> count = staad_obj.Property.GetElementCountByAttribute("MEMBTYPE", "BRACE")
         """
-        return self._property.GetElementCountByAttribute(attribute_name, str_value)
+        retVal = self._property.GetElementCountByAttribute(attribute_name, str_value)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetElementListByAttribute(self, attribute_name: str, str_value: str):
         """
@@ -4057,9 +4082,11 @@ class OSProperty:
         string_val = make_safe_str()
         ref_attribute_name = make_variant_vt_ref(attribute_name, automation.VT_BSTR)
         ref_string_val = make_variant_vt_ref(string_val, automation.VT_BSTR)
-        self._property.GetAssignedAttributeByIndex(
+        retVal = self._property.GetAssignedAttributeByIndex(
             attribute_index, ref_attribute_name, ref_string_val
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return ref_attribute_name[0], ref_string_val[0]
 
     def RemoveAttribute(
@@ -4079,8 +4106,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -4095,9 +4122,12 @@ class OSProperty:
         vt_varMemberList = make_variant_vt_ref(
             safe_varMemberList, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.RemoveAttribute(
+        retVal = self._property.RemoveAttribute(
             attribute_name, str_value, vt_varMemberList
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def GetMemberSpecCode(self, member_id: int):
         """
@@ -4490,10 +4520,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the section table number if successful.\n
-            Returns -3001 if cannot find member beam number.\n
-            Returns -6004 if section not found in profile database.\n
-            Returns -6022 if no property is attached to the member/element.
+            Returns the section table number if successful.
 
         Examples
         --------
@@ -4501,7 +4528,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetSectionPropertyAssignedBeamCount(1)
         """
-        return self._property.GetSectionPropertyAssignedBeamCount(prof_type)
+        retVal = self._property.GetSectionPropertyAssignedBeamCount(prof_type)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetSectionPropertyAssignedBeamList(self, prof_type: int):
         """
@@ -4560,8 +4590,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns count of isotropic material assigned beams if successful.\n
-            Else returns -6023 if Material not found in material database.
+            Returns count of isotropic material assigned beams.
 
         Examples
         --------
@@ -4570,7 +4599,10 @@ class OSProperty:
         >>> material_name = "Material123"
         >>> count = staad_obj.Property.GetIsotropicMaterialAssignedBeamCount(material_name)
         """
-        return self._property.GetIsotropicMaterialAssignedBeamCount(material_name)
+        retVal = self._property.GetIsotropicMaterialAssignedBeamCount(material_name)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetIsotropicMaterialAssignedBeamList(self, material_name: str):
         """
@@ -4707,8 +4739,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -4716,7 +4748,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.RemovePropertyFromBeam(1)
         """
-        return self._property.RemovePropertyFromBeam(beam_id)
+        retVal = self._property.RemovePropertyFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def DeleteProperty(self, property_id: int):
         """
@@ -4729,8 +4764,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns true if successful else returns false if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -4924,7 +4959,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.SetPropertyUniqueID(4, "EA8A58A7-FF56-4F25-A9A9-C6D0797FCC47")
         """
-        return self._property.SetPropertyUniqueID(property_number, property_unique_id)
+        self._property.SetPropertyUniqueID(property_number, property_unique_id)
 
     def DeleteMemberSpec(self, spec_id: int):
         """
@@ -4938,7 +4973,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns true delete specification successful, else false if delete specification failed.
+            Returns True if delete specification is successful.
 
         Examples
         --------
@@ -4962,8 +4997,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns true if successful else false if it fails.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -4988,7 +5023,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns true if successful else false if it fails.
+            Returns True if successful.
 
         Examples
         --------
@@ -5010,8 +5045,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5020,7 +5055,10 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberTrussSpecFromBeam(beamIds[0])
         """
-        return self._property.RemoveMemberTrussSpecFromBeam(beam_id)
+        retVal = self._property.RemoveMemberTrussSpecFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveMemberInactiveSpecFromBeam(self, beam_id: int):
         """
@@ -5033,8 +5071,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5043,7 +5081,10 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> staad_obj.Property.RemoveMemberInactiveSpecFromBeam(beamIds[0])
         """
-        return self._property.RemoveMemberInactiveSpecFromBeam(beam_id)
+        retVal = self._property.RemoveMemberInactiveSpecFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveMemberTensionSpecFromBeam(self, beam_id: int):
         """
@@ -5056,8 +5097,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5066,7 +5107,10 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberTensionSpecFromBeam(beamIds[0])
         """
-        return self._property.RemoveMemberTensionSpecFromBeam(beam_id)
+        retVal = self._property.RemoveMemberTensionSpecFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveMemberIgnoreStiffSpecFromBeam(self, beam_id: int):
         """
@@ -5079,8 +5123,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else returns -1 if general error
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5089,7 +5133,10 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberTensionSpecFromBeam(beamIds[0])
         """
-        return self._property.RemoveMemberIgnoreStiffSpecFromBeam(beam_id)
+        retVal = self._property.RemoveMemberIgnoreStiffSpecFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def CreateBeamPropertyFromTableEx(
         self, country_code: int, section_name: str, solid_shape_type: int
@@ -5157,7 +5204,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID else returns 0 if library error: Unable to create property.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -5183,8 +5230,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else returns -1 if general error
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5193,7 +5240,10 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberCompressionSpecFromBeam(beamIds[0])
         """
-        return self._property.RemoveMemberCompressionSpecFromBeam(beam_id)
+        retVal = self._property.RemoveMemberCompressionSpecFromBeam(beam_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveMemberCableSpecFromBeam(self, beam_id: int, tension_or_length: int):
         """
@@ -5209,7 +5259,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns 'True' if remove member cable specification succeeded else 'False'.
+            Returns True if successful.
 
         Examples
         --------
@@ -5231,8 +5281,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else returns -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5241,7 +5291,10 @@ class OSProperty:
         >>> plateIds = staad_obj.Geometry.GetPlateList()
         >>> result = staad_obj.Property.RemoveElementPlaneStressSpecFromPlate(plateIds[0])
         """
-        return self._property.RemoveElementPlaneStressSpecFromPlate(plate_id)
+        retVal = self._property.RemoveElementPlaneStressSpecFromPlate(plate_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveElementIgnoreInplaneRotnSpecFromPlate(self, plate_id: int):
         """
@@ -5254,8 +5307,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else returns -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5264,7 +5317,10 @@ class OSProperty:
         >>> plateIds = staad_obj.Geometry.GetPlateList()
         >>> result = staad_obj.Property.RemoveElementIgnoreInplaneRotnSpecFromPlate(plateIds[0])
         """
-        return self._property.RemoveElementIgnoreInplaneRotnSpecFromPlate(plate_id)
+        retVal = self._property.RemoveElementIgnoreInplaneRotnSpecFromPlate(plate_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveElementNodeReleaseSpecFromPlate(self, plate_id: int, node_id: int):
         """
@@ -5279,8 +5335,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if OK else returns -1 if general error.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -5290,7 +5346,10 @@ class OSProperty:
         >>> nodeIds = staad_obj.Geometry.GetNodeList()
         >>> result = staad_obj.Property.RemoveElementNodeReleaseSpecFromPlate(plateIds[0], nodeIds[0])
         """
-        return self._property.RemoveElementNodeReleaseSpecFromPlate(plate_id, node_id)
+        retVal = self._property.RemoveElementNodeReleaseSpecFromPlate(plate_id, node_id)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def GetUserProvidedTableNo(self, table_index: int):
         """
@@ -5304,7 +5363,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns User Provided Table (UPT) number ID else returns -1 if general error.
+            Returns User Provided Table (UPT) number ID.
 
         Examples
         --------
@@ -5313,7 +5372,10 @@ class OSProperty:
         >>> upt_ids = staad_obj.Property.GetUserProvidedTableList()
         >>> result = staad_obj.Property.GetUserProvidedTableNo(upt_ids[0])
         """
-        return self._property.GetUserProvidedTableNo(table_index)
+        retVal = self._property.GetUserProvidedTableNo(table_index)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetUserProvidedTableSectionType(self, table_id: int):
         """
@@ -5569,9 +5631,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful, else returns status code:
-                - -4001 : Cannot find plate.
-                - -6022 : No property is attached to the plate.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -5580,7 +5640,10 @@ class OSProperty:
         >>> plate_list = staad_obj.Geometry.GetPlateList()
         >>> result = staad_obj.Property.GetPlateSectionPropertyRefNo(plate_list[0])
         """
-        return self._property.GetPlateSectionPropertyRefNo(PlateNo)
+        retVal = self._property.GetPlateSectionPropertyRefNo(PlateNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def RemovePropertyFromPlate(self, plate_id: int):
         """
@@ -5593,10 +5656,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns value of the assigned section property ID.\n
-            Else returns '-4001' if cannot find plate with specified plate id (plate_id).\n
-            Else returns '-6022' if no property is attached to the plate.
+        bool
+            Returns True if successful.
 
         Examples
         --------
@@ -5840,10 +5901,8 @@ class OSProperty:
         Returns
         -------
         int
-            Status code:
-                - 1 : Material is updated as a material with that name was already present.
-                - 0 : Material is created.
-                - -1 : General Error
+            Returns 1 if Material is updated as a material with that name was already present.
+            Returns 0 if Material is created.
 
         Examples
         --------
@@ -5851,7 +5910,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateIsotropicMaterialPropertiesEx("STEEL1", 2.0, 7.6, 5.0, 15.3, 7.6, 19.6, 13.0, 14.7, 6.8, 1.8, 1.7)
         """
-        return self._property.CreateIsotropicMaterialPropertiesEx(
+        retVal = self._property.CreateIsotropicMaterialPropertiesEx(
             material_name,
             elasiticity,
             poisson,
@@ -5865,6 +5924,9 @@ class OSProperty:
             rt,
             fcu,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetIsotropicMaterialPropertiesEx(self, material_number: int):
         """
@@ -6492,7 +6554,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetShapeCode(5, "HW200X200")
         """
-        return self._property.GetShapeCode(country_code, section_name)
+        retVal = self._property.GetShapeCode(country_code, section_name)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetRecordForSection(self, country_code: int, section_name: str):
         """
@@ -6508,7 +6573,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns record number for specific section if successful else -1 if it encounters generate error.
+            Returns record number for specific section.
 
         Examples
         --------
@@ -6516,7 +6581,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetRecordForSection(2, "HW200X200")
         """
-        return self._property.GetRecordForSection(country_code, section_name)
+        retVal = self._property.GetRecordForSection(country_code, section_name)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetMemberAttributeCount(self):
         """
@@ -6664,11 +6732,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful else returns a status from below:
-                - 0 : Library Error: Unable to create property.
-                - -6004 : Section is not found in profile database.
-                - -6005 : Section data for a section is not found.
-                - -6006 : Invalid section type.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -6680,9 +6744,12 @@ class OSProperty:
         vt_AddSpeclist = make_variant_vt_ref(
             safe_AddSpeclist, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreateBeamPropertyFromTableComposite(
+        retVal = self._property.CreateBeamPropertyFromTableComposite(
             country_code, section_name, spec_type, vt_AddSpeclist
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateBeamPropertyFromTableWithCoverPlates(
         self,
@@ -6756,11 +6823,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful else returns status code from below:
-                - 0 : Library Error: Unable to create property.
-                - -6004 : Section is not found in profile database.
-                - -6005 : Section data for a section is not found.
-                - -6006 : Invalid section type.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -6772,9 +6835,12 @@ class OSProperty:
         vt_AddSpeclist = make_variant_vt_ref(
             safe_AddSpeclist, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreateBeamPropertyFromTableWithCoverPlates(
+        retVal = self._property.CreateBeamPropertyFromTableWithCoverPlates(
             country_code, section_name, spec_type, vt_AddSpeclist
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AddUPTPropertyWIDEFLANGEUNEQUAL(
         self, table_reference_id: int, section_name: str, profile_spec_list: list
@@ -6942,11 +7008,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful else returns status code from below:
-                - 0 : Library error: unable to create property.
-                - -6004 : Section is not found in profile database.
-                - -6005 : Section data for a section is not found.
-                - -6006 : Invalid section type.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -6954,9 +7016,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateTeePropertyFromTable(7, "ISNT20", 9)
         """
-        return self._property.CreateTeePropertyFromTable(
+        retVal = self._property.CreateTeePropertyFromTable(
             country_code, section_name, spec_type
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def SetTypeToIsotropicMaterial(self, material_name: str, material_type: int):
         """
@@ -6972,7 +7037,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns 'True' if Set Type to Material successful else 'False' if generate error.
+            Returns True if successful.
 
         Examples
         --------
@@ -7036,7 +7101,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns section property number ID if successful else -1 if general error.
+            Returns section property number ID if successful.
 
         Examples
         --------
@@ -7044,7 +7109,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreatePropertyFromUPTTable(2, "UPT VJG50-2")
         """
-        return self._property.CreatePropertyFromUPTTable(table_id, section_name)
+        retVal = self._property.CreatePropertyFromUPTTable(table_id, section_name)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateParametricSurfaceThicknessProperty(self, node_thickness_list: list):
         """
@@ -7058,10 +7126,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful,\n
-            Else returns status code from below:
-                - -106 : node_thickness_list gives dimensional array error.
-                - -6003 : Library error being unable to create property.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -7299,8 +7364,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns '0' if OK successful deleted else '1' if ERROR delete unsuccessful.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -7308,7 +7373,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> status = staad_obj.Property.DeleteAllControlDependentRelations()
         """
-        return self._property.DeleteAllControlDependentRelations()
+        retVal = self._property.DeleteAllControlDependentRelations()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def CreateWideFlangePropertyFromTable(
         self, country_code: int, section_name: str, spec_type: str, specs_list: list
@@ -7400,7 +7468,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful else -1 if general error.
+            Returns the assigned section property ID if successful.
 
         Examples
         --------
@@ -7414,9 +7482,12 @@ class OSProperty:
         vt_SpecsList = make_variant_vt_ref(
             safe_SpecsList, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreateWideFlangePropertyFromTable(
+        retVal = self._property.CreateWideFlangePropertyFromTable(
             country_code, section_name, spec_type, vt_SpecsList
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateIsotropicMaterialSteel(
         self,
@@ -7466,10 +7537,8 @@ class OSProperty:
         Returns
         -------
         int
-            Status code from below:
-                - 1 : Material is updated as a material with that name was already present.
-                - 0 : Material is created.
-                - -1 : General Error
+            Returns 1 if Material is updated as a material with that name was already present.
+            Returns 0 if Material is created.
 
         Examples
         --------
@@ -7477,7 +7546,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> status = staad_obj.Property.CreateIsotropicMaterialSteel("STEEL1", 11.5, 3.5, 11.1, 2.8, 8.9, 7.1, 18.5, 12.1, 16.2, 13.4, 4)
         """
-        return self._property.CreateIsotropicMaterialSteel(
+        retVal = self._property.CreateIsotropicMaterialSteel(
             name,
             elasticity_mod,
             poisson_ratio,
@@ -7491,6 +7560,9 @@ class OSProperty:
             yield_ratio,
             is_physical,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateIsotropicMaterialConcrete(
         self,
@@ -7531,10 +7603,8 @@ class OSProperty:
         Returns
         -------
         int
-            Status code:
-                - 1 : Material updated as a material with that name was already present.
-                - 0 : Material created
-                - -1 : General error
+            Returns 1 if Material is updated as a material with that name was already present.
+            Returns 0 if Material is created.
 
         Examples
         --------
@@ -7542,7 +7612,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateIsotropicMaterialConcrete("CONCRETE1", 453600.0, 0.17, 193846, 0.15, 5e-06, 0.03, 576, 0)
         """
-        return self._property.CreateIsotropicMaterialConcrete(
+        retVal = self._property.CreateIsotropicMaterialConcrete(
             name,
             elasticity,
             poisson,
@@ -7553,6 +7623,9 @@ class OSProperty:
             compressive_strength,
             physical,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateIsotropicMaterialAluminum(
         self,
@@ -7590,10 +7663,8 @@ class OSProperty:
         Returns
         -------
         int
-            Status code:
-                - 1 : Material updated (name existed).
-                - 0 : Material created.
-                - -1 : General error.
+            Returns 1 if Material is updated as a material with that name was already present.
+            Returns 0 if Material is created.
 
         Examples
         --------
@@ -7601,7 +7672,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateIsotropicMaterialAluminum("AluminumM124", 6.8, 0.34, 2.5, 2700.0, 2.3e-5, 0.02, 1)
         """
-        return self._property.CreateIsotropicMaterialAluminum(
+        retVal = self._property.CreateIsotropicMaterialAluminum(
             material_name,
             elasticity_mod,
             poisson,
@@ -7611,6 +7682,9 @@ class OSProperty:
             damping_ratio,
             physical_flag,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateIsotropicMaterialTimber(
         self,
@@ -7648,10 +7722,8 @@ class OSProperty:
         Returns
         -------
         int
-            Status code:
-                - 1 : Material updated (a material with that name already existed).
-                - 0 : Material created.
-                - -1 : General error.
+            Returns 1 if Material is updated as a material with that name was already present.
+            Returns 0 if Material is created.
 
         Examples
         --------
@@ -7659,7 +7731,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateIsotropicMaterialTimber("TIMBER1", 18.0, 6.0, 1.7, 8.7, 6.7, 1.5, 10)
         """
-        return self._property.CreateIsotropicMaterialTimber(
+        retVal = self._property.CreateIsotropicMaterialTimber(
             material_name,
             elasticity,
             poisson,
@@ -7669,6 +7741,9 @@ class OSProperty:
             damping_ratio,
             physical_flag,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def RemoveAllElementNodeReleaseSpec(self):
         """
@@ -7714,7 +7789,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful else status code -6016 if library error (Unable to create OFFSET specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -7750,7 +7825,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful else -6016 if Library Error(Unable to create OFFSET specification).
+            Returns the assigned specification number ID if successful.
 
         Examples
         --------
@@ -7932,7 +8007,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number id if successful, else returns status code '-6015' if Library Error (Unable to create MEMBER CABLE specification).
+            Returns the assigned specification number id if successful.
 
         Examples
         --------
@@ -7941,7 +8016,7 @@ class OSProperty:
         >>> plate_ids = staad_obj.Geometry.GetPlateIDs()
         >>> specification_id = staad_obj.Property.CreateMemberCableSpecEx(1, 16.6, 2, 2.1, 17.5, 16.9)
         """
-        return self._property.CreateMemberCableSpecEx(
+        retVal = self._property.CreateMemberCableSpecEx(
             tension_or_unstressed_len,
             spec_value,
             tension_end_node_indicator,
@@ -7949,6 +8024,9 @@ class OSProperty:
             self_weight_factor_y,
             self_weight_factor_z,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetElementOffsetSpecCount(self):
         """
@@ -8203,7 +8281,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns zero based index for the newly created specification if successful else -1 if unable to create MEMBER FIREPROOFING specification.
+            Returns zero based index for the newly created specification if successful.
 
         Examples
         --------
@@ -8211,9 +8289,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> count = staad_obj.Property.CreateMemberFireProofingSpec(1, 3.5, 6.4)
         """
-        return self._property.CreateMemberFireProofingSpec(
+        retval = self._property.CreateMemberFireProofingSpec(
             fire_proof_type, thickness_value, density
         )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval
 
     def RemoveMemberFireProofingSpecFromBeam(self, beam_id: int):
         """
@@ -8290,8 +8371,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 0 if successful else -1 if error (If path is empty or does not exist).
+        bool
+            True if successful.
 
         Examples
         --------
@@ -8299,7 +8380,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> count = staad_obj.Property.SetStandardProfileDBFolder("C:\\Folder_Path\\Profiles")
         """
-        return self._property.SetStandardProfileDBFolder(folder_name)
+        retVal = self._property.SetStandardProfileDBFolder(folder_name)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def GetStandardProfileDBFolder(self):
         """
@@ -8443,7 +8527,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> count = staad_obj.Property.GetMemberCountByAttributeIndex()
         """
-        return self._property.GetMemberCountByAttributeIndex(index)
+        retVal = self._property.GetMemberCountByAttributeIndex(index)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetMemberListByAttributeIndex(self, index: int):
         """
@@ -8468,5 +8555,7 @@ class OSProperty:
         n_members = self.GetMemberCountByAttributeIndex(index)
         safe_list = make_safe_array_long(n_members)
         lista = make_variant_vt_ref(safe_list, automation.VT_ARRAY | automation.VT_I4)
-        self._property.GetMemberListByAttributeIndex(index, lista)
+        retVal = self._property.GetMemberListByAttributeIndex(index, lista)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return list(lista[0])

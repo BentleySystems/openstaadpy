@@ -8,6 +8,7 @@ from .openStaadHelper import (
 )
 from comtypes import automation, CoInitialize
 import comtypes.client as cc
+from .oserrors import raise_os_error_if_error_code
 
 
 class OSDesign:
@@ -50,7 +51,10 @@ class OSDesign:
         >>> staad_obj = os_analytical.connect()
         >>> ref_id = staad_obj.Design.CreateDesignBrief(1001)
         """
-        return self._design.CreateDesignBrief(design_code)
+        retVal = self._design.CreateDesignBrief(design_code)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AssignDesignParameter(
         self,
@@ -75,8 +79,8 @@ class OSDesign:
 
         Returns
         -------
-        int
-            0 if successful, -1 otherwise.
+        bool
+            True if successful, False otherwise.
 
         Examples
         --------
@@ -91,9 +95,12 @@ class OSDesign:
         members_variant = make_variant_vt_ref(
             safe_members, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._design.AssignDesignParameter(
+        retVal = self._design.AssignDesignParameter(
             design_ref_id, design_param, design_param_value, members_variant
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignDesignCommand(
         self,
@@ -118,8 +125,8 @@ class OSDesign:
 
         Returns
         -------
-        int
-            0 if successful, -1 otherwise.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -134,9 +141,12 @@ class OSDesign:
         members_variant = make_variant_vt_ref(
             safe_members, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._design.AssignDesignCommand(
+        retVal = self._design.AssignDesignCommand(
             design_ref_id, design_command_name, design_command_value, members_variant
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AssignDesignGroup(
         self,
@@ -164,8 +174,8 @@ class OSDesign:
 
         Returns
         -------
-        int
-            0 if successful, -1 otherwise.
+        bool
+            True if successful, False otherwise.
 
         Examples
         --------
@@ -180,13 +190,16 @@ class OSDesign:
         members_variant = make_variant_vt_ref(
             safe_members, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._design.AssignDesignGroup(
+        retVal = self._design.AssignDesignGroup(
             design_ref_id,
             design_group_name,
             design_group_value,
             same_as_member,
             members_variant,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def GetDesignBriefCode(self, design_ref_id: int):
         """
@@ -248,6 +261,8 @@ class OSDesign:
         status = self._design.GetMemberDesignParameters(
             design_ref_id, member_no, design_params
         )
+        if status < 0:
+            raise_os_error_if_error_code(status)
 
         # Attempt to read count (number of parameters for the member)
         try:

@@ -6,6 +6,7 @@ from .openStaadHelper import (
     create_variant_int,
     make_safe_array_double,
     make_safe_array_long,
+    make_safe_array_string,
     make_safe_str,
     make_variant_vt,
     make_variant_vt_ref,
@@ -24,6 +25,38 @@ from .staadVersionHelper import compare_versions
 from comtypes import COMError, automation
 from comtypes import client
 from comtypes import CoInitialize
+
+
+class _COMProxy:
+    """Proxy wrapper around COM object that provides clear error messages when a COM method is not found or fails."""
+
+    def __init__(self, com_object, method_names):
+        object.__setattr__(self, "_com", com_object)
+        object.__setattr__(self, "_methods", frozenset(method_names))
+
+    def __getattr__(self, name):
+        try:
+            attr = getattr(object.__getattribute__(self, "_com"), name)
+        except (AttributeError, COMError):
+            raise OsErrorBase(
+                f"'{name}' is not available in the installed version of STAAD.Pro. "
+                f"Please update STAAD.Pro to the latest version to use this API.",
+                -1,
+            ) from None
+        if name in object.__getattribute__(self, "_methods"):
+
+            def _wrapper(*args, **kwargs):
+                try:
+                    return attr(*args, **kwargs)
+                except (COMError, AttributeError):
+                    raise OsErrorBase(
+                        f"'{name}' is not available in the installed version of STAAD.Pro. "
+                        f"Please update STAAD.Pro to the latest version to use this API.",
+                        -1,
+                    ) from None
+
+            return _wrapper
+        return attr
 
 
 def getActiveObject(filePath: str = ""):
@@ -72,9 +105,13 @@ class OSRoot:
                 "ShowApplication",
                 "UpdateStructure",
                 "Internal_TrackPython",
+                "GetAnalysisErrorMessages",
+                "GetAnalysisWarningMessages",
             ]
             for function_name in self._functions:
                 self._staad._FlagAsMethod(function_name)
+
+            self._staad = _COMProxy(self._staad, self._functions)
 
             self.Geometry = OSGeometry(self._staad)
             self.View = OSView(self._staad)
@@ -90,7 +127,7 @@ class OSRoot:
             if compare_versions(version, "25.0.1.293") == 1:
                 self._staad.Internal_TrackPython()
 
-        except (OSError, COMError):
+        except (OSError, COMError, OsErrorBase):
             self._staad = None
             raise OsErrorBase("StaadPro Application not found!! ERROR with COM", -1)
 
@@ -253,6 +290,8 @@ class OSRoot:
         retval = self._staad.GetAnalysisStatus(
             modelPath, NoOfWarnings, NoofErrors, CPUTime
         )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
 
         status_dict = {
             -2: "Invalid model path",
@@ -844,7 +883,9 @@ class OSRoot:
         ...     exit()
         >>> staad_obj.SetSilentMode(True)
         """
-        self._staad.SetSilentMode(int(silent))
+        retVal = self._staad.SetSilentMode(int(silent))
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def GetErrorMessage(self):
         """
@@ -1020,6 +1061,104 @@ class OSRoot:
             approval_date_ref[0],
             comments_ref[0],
         ]
+
+    def GetAnalysisErrorMessages(self, modelPath: str = None):
+        """
+        Get error messages from the analysis log file.
+
+        The method internally calls GetAnalysisStatus to determine the number of errors,
+        allocates an array of that size, and retrieves the error messages.
+
+        Parameters
+        ----------
+        modelPath : str, optional
+            The full path of the STAAD model. If not provided, the currently open model will be used.
+
+        Returns
+        -------
+        list of str
+            A list of error message strings from the analysis log file.
+            Returns an empty list if there are no errors.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> if staad_obj is None:
+        ...     print("staad object not found")
+        ...     exit()
+        >>> errors = staad_obj.GetAnalysisErrorMessages()
+        >>> for msg in errors:
+        ...     print(msg)
+        """
+        if modelPath is None:
+            modelPath = self.GetSTAADFile(bFullPath=True)
+
+        status = self.GetAnalysisStatus(modelPath)
+        noOfErrors = status["NoOfErrors"]
+
+        if noOfErrors == 0:
+            return []
+
+        safe_errors = make_safe_array_string(noOfErrors)
+        errors = make_variant_vt_ref(
+            safe_errors, automation.VT_ARRAY | automation.VT_BSTR
+        )
+
+        retval = self._staad.GetAnalysisErrorMessages(modelPath, errors)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+
+        return list(errors[0])
+
+    def GetAnalysisWarningMessages(self, modelPath: str = None):
+        """
+        Get warning messages from the analysis ANL file.
+
+        The method internally calls GetAnalysisStatus to determine the number of warnings,
+        allocates an array of that size, and retrieves the warning messages.
+
+        Parameters
+        ----------
+        modelPath : str, optional
+            The full path of the STAAD model. If not provided, the currently open model will be used.
+
+        Returns
+        -------
+        list of str
+            A list of warning message strings from the analysis ANL file.
+            Returns an empty list if there are no warnings.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> if staad_obj is None:
+        ...     print("staad object not found")
+        ...     exit()
+        >>> warnings = staad_obj.GetAnalysisWarningMessages()
+        >>> for msg in warnings:
+        ...     print(msg)
+        """
+        if modelPath is None:
+            modelPath = self.GetSTAADFile(bFullPath=True)
+
+        status = self.GetAnalysisStatus(modelPath)
+        noOfWarnings = status["NoOfWarnings"]
+
+        if noOfWarnings == 0:
+            return []
+
+        safe_warnings = make_safe_array_string(noOfWarnings)
+        warnings = make_variant_vt_ref(
+            safe_warnings, automation.VT_ARRAY | automation.VT_BSTR
+        )
+
+        retval = self._staad.GetAnalysisWarningMessages(modelPath, warnings)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+
+        return list(warnings[0])
 
     def SetFullJobInfo(
         self,

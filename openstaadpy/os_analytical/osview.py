@@ -13,6 +13,7 @@ from .openStaadHelper import (
 from comtypes import automation
 from comtypes import CoInitialize
 from .osgeometry import OSGeometry
+from .oserrors import raise_os_error_if_error_code
 
 
 class OSView:
@@ -1513,9 +1514,6 @@ class OSView:
         -------
         int
             Returns 1 if Export view is successful.
-            Returns -1 if Generic Error.
-            Returns -100 if Invalid Argument.
-            Returns -1003 if File already exist.
 
         Examples
         --------
@@ -1523,7 +1521,10 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.View.ExportView(r"<folderPath>", "<fileName>", 1, True)
         """
-        return self._view.ExportView(FileLocation, FileName, FileFormat, Overwrite)
+        retVal = self._view.ExportView(FileLocation, FileName, FileFormat, Overwrite)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CopyPicture(self):
         """
@@ -1600,7 +1601,9 @@ class OSView:
         scaleList = make_variant_vt_ref(
             scale_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
-        self._view.GetScaleValues(scaleList)
+        retVal = self._view.GetScaleValues(scaleList)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return scaleList[0]
 
     def SetScaleValues(self, ScalesList: list):
@@ -1617,7 +1620,6 @@ class OSView:
         int
             Returns 1 if Values were successfully updated.
             Returns 0 if Values could not be updated.
-            Returns -1 if Error with defined array.
 
         Examples
         --------
@@ -1626,7 +1628,10 @@ class OSView:
         >>> staad_obj.View.SetScaleValues([1.0, 2.5, 3.2])
         """
         ScalesList_safe = make_safe_array_double_input(ScalesList)
-        return self._view.SetScaleValues(ScalesList_safe)
+        retVal = self._view.SetScaleValues(ScalesList_safe)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetScaleValueByType(self, scaleTypeId: int):
         """
@@ -1688,7 +1693,6 @@ class OSView:
         -------
         int
             Returns Positive_Value Count of scales.
-            Returns 0/Negative_Value Unsuccessful.
 
         Examples
         --------
@@ -1707,7 +1711,6 @@ class OSView:
         int
             Returns 1 if View successfully detached.
             Returns 0 if Unsuccessful
-            Returns -1 if Generic Error
 
         Examples
         --------
@@ -1715,7 +1718,10 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> status = staad_obj.View.DetachView()
         """
-        return self._view.DetachView()
+        retVal = self._view.DetachView()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def RenameView(self, viewName: str):
         """
@@ -1732,8 +1738,6 @@ class OSView:
             Returns 1 if Rename view is successful.
             Returns 0 if Unsuccessful
             Returns 2 if View name already used.
-            Returns -1 if Generic Error
-            Returns -100 if Invalid Argument
 
         Examples
         --------
@@ -1741,7 +1745,10 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> status = staad_obj.View.RenameView("view1")
         """
-        return self._view.RenameView(viewName)
+        retVal = self._view.RenameView(viewName)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def OpenView(self, viewName: str, windowOptions: bool):
         """
@@ -1760,8 +1767,6 @@ class OSView:
             Returns 1 if View Successfully opened.
             Returns 0 if Unsuccessful
             Returns 2 if View name does not exist.
-            Returns -1 if Generic Error
-            Returns -100 if Invalid Argument
 
         Examples
         --------
@@ -1770,7 +1775,10 @@ class OSView:
         >>> status = staad_obj.View.OpenView("view1", True)
         >>> print(status)
         """
-        return self._view.OpenView(viewName, windowOptions)
+        retVal = self._view.OpenView(viewName, windowOptions)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def SaveView(self, viewName: str, overWrite: bool):
         """
@@ -1789,8 +1797,6 @@ class OSView:
             Returns 1 if Save view is successful.
             Returns 0 if Unsuccessful
             Returns 2 if View name already exist and overWrite is false.
-            Returns -1 if Generic Error
-            Returns -100 if Invalid Argument
 
         Examples
         --------
@@ -1799,7 +1805,10 @@ class OSView:
         >>> status = staad_obj.View.SaveView("view1", True)
         >>> print(status)
         """
-        return self._view.SaveView(viewName, overWrite)
+        retVal = self._view.SaveView(viewName, overWrite)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetWindowTitle(self, id: int):
         """
@@ -1832,7 +1841,6 @@ class OSView:
         -------
         int
             Returns Positive_Number The count of open Window.
-            Returns -1 if Error
 
         Examples
         --------
@@ -1901,9 +1909,6 @@ class OSView:
         int
             Returns 1 if Set Design Results is successful.
             Returns 0 if Unsuccessful.
-            Returns -1 if Generic Error.
-            Returns -2 if Design Results not Loaded.
-            Returns -100 if Invalid Argument.
 
         Examples
         --------
@@ -1911,4 +1916,7 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.View.SetDesignResults(1, True, True)
         """
-        return self._view.SetDesignResults(utilization, color, showValues)
+        retVal = self._view.SetDesignResults(utilization, color, showValues)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
