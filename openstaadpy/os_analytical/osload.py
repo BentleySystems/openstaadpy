@@ -177,8 +177,6 @@ class OSLoad:
         -------
         int
             Load number ID if the load case is created successfully.
-            Returns -1 in case of a general error.
-            Returns -8004 if the load case creation fails specifically.
 
         Examples
         --------
@@ -188,7 +186,10 @@ class OSLoad:
         >>> print(load_id)
         """
 
-        return self._load.CreateNewPrimaryLoad(primaryLoadTitle)
+        retVal = self._load.CreateNewPrimaryLoad(primaryLoadTitle)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateNewLoadCombination(self, loadCombTitle: str, loadCombNo: int):
         """
@@ -205,8 +206,6 @@ class OSLoad:
         -------
         int
             Load number ID assigned to the load combination.
-            Returns -1 in case of an error.
-            Returns -8004 if it fails to create the load.
 
         Examples
         --------
@@ -216,7 +215,10 @@ class OSLoad:
         >>> print(comb_id)
         """
 
-        return self._load.CreateNewLoadCombination(loadCombTitle, loadCombNo)
+        retVal = self._load.CreateNewLoadCombination(loadCombTitle, loadCombNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateNewReferenceLoad(
         self, nodeNo: int, referenceLoadCaseTitle: str, loadType: int
@@ -237,8 +239,6 @@ class OSLoad:
         -------
         int
             Reference load case number ID.
-            Returns -1 in case of an error.
-            Returns -8004 if it fails to create the load.
 
         Examples
         --------
@@ -247,9 +247,12 @@ class OSLoad:
         >>> ref_id = staad_obj.Load.CreateNewReferenceLoad(1, "Ref Load", 0)
         >>> print(ref_id)
         """
-        return self._load.CreateNewReferenceLoad(
+        retVal = self._load.CreateNewReferenceLoad(
             nodeNo, referenceLoadCaseTitle, loadType
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateLoadEnvelop(
         self, envelopNumber: int, envelopType: int, loadCaseList: list
@@ -314,7 +317,8 @@ class OSLoad:
 
         Returns
         -------
-        None
+        bool
+            True if the load list was created successfully.
 
         Examples
         --------
@@ -324,7 +328,8 @@ class OSLoad:
         >>> print(result)
         """
         safe_LoadCaseList = make_safe_array_long_input(loadCaseList)
-        self._load.CreateLoadList(listType, safe_LoadCaseList)
+        retval = self._load.CreateLoadList(listType, safe_LoadCaseList)
+        return bool(retval)
 
     def CreateNewPrimaryLoadEx(self, primaryLoadTitle: str, loadType: int):
         """
@@ -368,8 +373,6 @@ class OSLoad:
         -------
         int
             Returns load Number of newly created Primary load Case.
-            Returns -1 if general error.
-            Returns -8004 if fail to create load.
 
         Examples
         --------
@@ -378,7 +381,10 @@ class OSLoad:
         >>> load_id = staad_obj.Load.CreateNewPrimaryLoadEx("Live Load", 1)
         >>> print(load_id)
         """
-        return self._load.CreateNewPrimaryLoadEx(primaryLoadTitle, loadType)
+        retVal = self._load.CreateNewPrimaryLoadEx(primaryLoadTitle, loadType)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateNewPrimaryLoadEx2(
         self, primaryLoadTitle: str, loadType: int, loadCaseNo: int
@@ -477,8 +483,6 @@ class OSLoad:
         -------
         int
             Reference load case number ID.
-            Returns -1 in case of an error.
-            Returns -8002 if the load case is not found.
 
         Examples
         --------
@@ -487,7 +491,10 @@ class OSLoad:
         >>> result = staad_obj.Load.SetReferenceLoadActive(2)
         >>> print(result)
         """
-        return self._load.SetReferenceLoadActive(nLoadCaseNo)
+        retVal = self._load.SetReferenceLoadActive(nLoadCaseNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def SetLoadType(self, loadCaseNumber: int, loadType: int):
         """
@@ -529,9 +536,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the load type was set successfully.
 
         Examples
         --------
@@ -540,7 +546,8 @@ class OSLoad:
         >>> result = staad_obj.Load.SetLoadType(1, 0)
         >>> print(result)
         """
-        return self._load.SetLoadType(loadCaseNumber, loadType)
+        retVal = self._load.SetLoadType(loadCaseNumber, loadType)
+        return bool(retVal)
 
     def SetASDLoadAttribute(
         self, loadCaseRefID: int, strengthType: int, allowStressIncrease: bool
@@ -577,9 +584,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the ASD load attribute was set successfully.
 
         Examples
         --------
@@ -588,9 +594,12 @@ class OSLoad:
         >>> result = staad_obj.Load.SetASDLoadAttribute(1, 1, True)
         >>> print(result)
         """
-        return self._load.SetASDLoadAttribute(
+        retVal = self._load.SetASDLoadAttribute(
             loadCaseRefID, strengthType, allowStressIncrease
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def SetLSDLoadAttribute(self, loadCaseRefID: int):
         """
@@ -603,9 +612,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the LSD load attribute was set successfully.
 
         Examples
         --------
@@ -614,7 +622,10 @@ class OSLoad:
         >>> result = staad_obj.Load.SetLSDLoadAttribute(1)
         >>> print(result)
         """
-        return self._load.SetLSDLoadAttribute(loadCaseRefID)
+        retVal = self._load.SetLSDLoadAttribute(loadCaseRefID)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddSelfWeightInXYZ(self, varInDirection: int, varLoadFactor: float):
         """
@@ -719,7 +730,7 @@ class OSLoad:
         >>> print(result)
         """
         safe_NodeIdList = make_safe_array_long_input(nodeIds)
-        return self._load.AddNodalLoad(
+        retVal = self._load.AddNodalLoad(
             safe_NodeIdList,
             forceInXDir,
             forceInYDir,
@@ -728,6 +739,9 @@ class OSLoad:
             momentInYDir,
             momentInZDir,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AddSupportDisplacement(
         self, nodeIds: list, varDirection: int, varDispValue: float
@@ -758,9 +772,12 @@ class OSLoad:
         >>> print(result)
         """
         safe_NodeIdList = make_safe_array_long_input(nodeIds)
-        return self._load.AddSupportDisplacement(
+        retVal = self._load.AddSupportDisplacement(
             safe_NodeIdList, varDirection, varDispValue
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AddMemberUniformForce(
         self,
@@ -803,9 +820,12 @@ class OSLoad:
         >>> print(result)
         """
         safe_BeamIdList = make_safe_array_long_input(beamIds)
-        return self._load.AddMemberUniformForce(
+        retVal = self._load.AddMemberUniformForce(
             safe_BeamIdList, varDirection, varForce, varD1, varD2, varD3
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AddMemberUniformMoment(
         self,
@@ -880,9 +900,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the concentrated force was added successfully.
 
         Examples
         --------
@@ -892,9 +911,10 @@ class OSLoad:
         >>> print(result)
         """
         safe_BeamIdList = make_safe_array_long_input(beamIds)
-        return self._load.AddMemberConcForce(
+        retVal = self._load.AddMemberConcForce(
             safe_BeamIdList, varDirection, varForce, varD1, varD2
         )
+        return bool(retVal)
 
     def AddMemberConcMoment(
         self,
@@ -966,10 +986,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
-            Returns -8001 Load direction is invalid.
+        bool
+            True if the linear varying load was added successfully.
 
         Examples
         --------
@@ -979,9 +997,10 @@ class OSLoad:
         >>> print(result)
         """
         safe_MemberIdList = make_safe_array_long_input(memberIds)
-        return self._load.AddMemberLinearVari(
+        retVal = self._load.AddMemberLinearVari(
             safe_MemberIdList, varDirection, float(varW1), float(varW2), float(varW3)
         )
+        return bool(retVal)
 
     def AddMemberTrapezoidal(
         self,
@@ -1015,9 +1034,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the trapezoidal load was added successfully.
 
         Examples
         --------
@@ -1027,9 +1045,10 @@ class OSLoad:
         >>> print(result)
         """
         safe_MemberIdList = make_safe_array_long_input(memberIds)
-        return self._load.AddMemberTrapezoidal(
+        retVal = self._load.AddMemberTrapezoidal(
             safe_MemberIdList, varDirection, varW1, varW2, varD1, varD2
         )
+        return bool(retVal)
 
     def AddMemberAreaLoad(self, beamIds: list, load: float):
         """
@@ -1045,8 +1064,7 @@ class OSLoad:
         Returns
         -------
         bool
-            Returns 0 if OK.
-            Returns -1 if General error.
+            Returns True if successful.
 
         Examples
         --------
@@ -1055,7 +1073,8 @@ class OSLoad:
         >>> staad_obj.Load.AddMemberAreaLoad([1], 5.0)
         """
         safe_BeamIdList = make_safe_array_long_input(beamIds)
-        return self._load.AddMemberAreaLoad(safe_BeamIdList, load)
+        retVal = self._load.AddMemberAreaLoad(safe_BeamIdList, load)
+        return bool(retVal)
 
     def AddMemberFixedEnd(self, beamIds: list, loadStart: float, loadEnd: float):
         """
@@ -1087,8 +1106,6 @@ class OSLoad:
         retval = self._load.AddMemberFixedEnd(
             safe_BeamIdList, safe_loadStart, safe_loadEnd
         )
-        if not bool(retval):
-            raise_os_error_if_error_code(retval)
         return bool(retval)
 
     def AddElementPressure(
@@ -1129,9 +1146,7 @@ class OSLoad:
         Returns
         -------
         bool
-            Returns 0 if OK.
-            Returns -1 if General error.
-            Returns -8001 if Load direction is invalid.
+            True if the pressure load was added successfully.
 
         Examples
         --------
@@ -1140,9 +1155,10 @@ class OSLoad:
         >>> staad_obj.Load.AddElementPressure([1], 3, 5.0, 0.0, 0.0, 1.0, 1.0)
         """
         safe_PlateIdList = make_safe_array_long_input(plateIds)
-        return self._load.AddElementPressure(
+        retVal = self._load.AddElementPressure(
             safe_PlateIdList, varDirection, varPressure, varX1, varY1, varX2, varY2
         )
+        return bool(retVal)
 
     def AddElementHydrostaticPressure(
         self,
@@ -1212,9 +1228,9 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the temperature load was added successfully.
+            False if an error occurred.
 
         Examples
         --------
@@ -1223,9 +1239,12 @@ class OSLoad:
         >>> staad_obj.Load.AddTemperatureLoad([1], 20.0, 30.0, 40.0)
         """
         safe_ElementIdList = make_safe_array_long_input(elementIds)
-        return self._load.AddTemperatureLoad(
+        retVal = self._load.AddTemperatureLoad(
             safe_ElementIdList, varTempAxialElong, varTempDiffTopAndBtm, varTemDiffSide
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddStrainLoad(self, elementIds: list, varAxialElong: float):
         """
@@ -1240,9 +1259,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the strain load was added successfully.
 
         Examples
         --------
@@ -1251,7 +1269,10 @@ class OSLoad:
         >>> staad_obj.Load.AddStrainLoad([1], 0.001)
         """
         safe_ElementIdList = make_safe_array_long_input(elementIds)
-        return self._load.AddStrainLoad(safe_ElementIdList, varAxialElong)
+        retVal = self._load.AddStrainLoad(safe_ElementIdList, varAxialElong)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddLoadAndFactorToCombination(
         self, loadCombNo: int, loadNo: int, factor: float
@@ -1270,9 +1291,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 OK.
-            Returns -1 General error.
+        bool
+            True if the load case was added to the combination successfully.
 
         Examples
         --------
@@ -1280,7 +1300,8 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddLoadAndFactorToCombination(1, 2, 1.0)
         """
-        return self._load.AddLoadAndFactorToCombination(loadCombNo, loadNo, factor)
+        retVal = self._load.AddLoadAndFactorToCombination(loadCombNo, loadNo, factor)
+        return bool(retVal)
 
     def AddMemberFloorLoad(
         self,
@@ -1314,10 +1335,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 1 OK.
-            Returns 0 General error.
-            Returns -8001 Load direction is invalid.
+        bool
+            True if the floor load was added successfully.
 
         Examples
         --------
@@ -1325,9 +1344,12 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddMemberFloorLoad(5.0, 0.0, 10.0, 0.0, 10.0, 0.0, 10.0)
         """
-        return self._load.AddMemberFloorLoad(
+        retVal = self._load.AddMemberFloorLoad(
             varPressure, varYMIN, varYMAX, varZMIN, varZMAX, varXMIN, varXMAX
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddMemberFloorLoadEx(
         self,
@@ -1484,9 +1506,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-             Returns 0 OK.
-             Returns -1 General error.
+        bool
+            True if the wind definition was added successfully.
 
         Examples
         --------
@@ -1494,7 +1515,8 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddWindDefinition(1, "Wind Load 1")
         """
-        return self._load.AddWindDefinition(varTypeNo, varTypeName)
+        retVal = self._load.AddWindDefinition(varTypeNo, varTypeName)
+        return bool(retVal)
 
     def AddWindIntensity(self, varTypeNo: int, varIntensity: list, varHeight: list):
         """
@@ -1511,9 +1533,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-             Returns 0 OK.
-             Returns -1 General error.
+        bool
+            True if the wind intensity was added successfully.
 
         Examples
         --------
@@ -1529,9 +1550,10 @@ class OSLoad:
         height_array_vt = make_variant_vt_ref(
             safe_HeightList, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._load.AddWindIntensity(
+        retVal = self._load.AddWindIntensity(
             varTypeNo, intensity_array_vt, height_array_vt
         )
+        return bool(retVal)
 
     def AddWindExposure(
         self, varTypeNo: int, varExposureFactor: float, varNodeArray: list
@@ -1550,9 +1572,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-             Returns 0 OK.
-             Returns -1 General error.
+        bool
+            True if the wind exposure was added successfully.
 
         Examples
         --------
@@ -1564,7 +1585,8 @@ class OSLoad:
         node_array_vt = make_variant_vt_ref(
             safe_NodeList, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._load.AddWindExposure(varTypeNo, varExposureFactor, node_array_vt)
+        retVal = self._load.AddWindExposure(varTypeNo, varExposureFactor, node_array_vt)
+        return bool(retVal)
 
     def AddWindLoad(
         self,
@@ -1619,9 +1641,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-             Returns 0 OK.
-             Returns -1 General error.
+        bool
+            True if successful, False otherwise.
 
         Examples
         --------
@@ -1629,7 +1650,7 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddWindLoad(1, 3, 1.0, 1, 0.0, 10.0, 0.0, 10.0, 0.0, 10.0)
         """
-        return self._load.AddWindLoad(
+        retVal = self._load.AddWindLoad(
             varTypeNo,
             varDirection,
             dFraction,
@@ -1641,6 +1662,7 @@ class OSLoad:
             dXMIN,
             dXMAX,
         )
+        return bool(retVal)
 
     def AddSeismicDefinition(self, varType: int, varAccidental: int):
         """
@@ -1855,21 +1877,18 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK .
-            Returns -1 if General error.
-            Returns -100 if Invalid argument.
-            Returns -106 if 1 dimensional array of long expected.
-            Returns -113 if Integer array/Integer expected.
-            Returns -2006 if Invalid Node Number.
-            Returns -8034 if Seisemic Code not found.
+        bool
+            True if successful, False otherwise.
 
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefJointWeight(1.0, [1, 2, 3])
         """
         safe_NodeIdList = make_safe_array_long_input(nodeList)
-        return self._load.AddSeismicDefJointWeight(weight, safe_NodeIdList)
+        retVal = self._load.AddSeismicDefJointWeight(weight, safe_NodeIdList)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def AddSeismicDefElementWeight(self, pressure: float, elementList: list):
         """
@@ -1993,16 +2012,17 @@ class OSLoad:
 
         Returns
         -------
-        int
-             Returns 0 if OK.
-             Returns -1 if General error.
-             Returns -8001 if Load direction is invalid.
+        bool
+            True if successful.
 
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicLoad(0, 1.0)
         """
-        return self._load.AddSeismicLoad(loadDirection, factor)
+        retVal = self._load.AddSeismicLoad(loadDirection, factor)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddAutoLoadCombinations(
         self, loadCombCode: str, loadCombCategory: str, loadList: list
@@ -2143,12 +2163,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK .
-            Returns -1 if General error.
-            Returns -107 if 1 dimensional array of long expected.
-            Returns -8034 if Invalid seismic code.
-            Returns -8038 if Invalid Direction.
+        bool
+            True if successful, False otherwise.
 
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
@@ -2158,7 +2174,10 @@ class OSLoad:
         refSizeArray_vt = make_variant_vt_ref(
             ref_size_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._load.AddSeismicDefWallArea(nTypeNo, direction, refSizeArray_vt)
+        retVal = self._load.AddSeismicDefWallArea(nTypeNo, direction, refSizeArray_vt)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def AddWindDefinitionASCE7Parameters(
         self,
@@ -2474,8 +2493,6 @@ class OSLoad:
             Factors_safe_list,
         )
 
-        if retval < 0:
-            raise_os_error_if_error_code(retval)
         return bool(retval)
 
     def AddNotionalLoad(
@@ -2795,15 +2812,14 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if successful.
-            Returns -1 if unsuccessful
+        bool
+            True if successful, False otherwise.
 
         Notes:
             - The default path of Codes.ini under "%localappdata%\\Bentley\\Engineering\\STAAD.Pro <version>\\Default\\Language\\en".
         """
         loadList_safe_list = make_safe_array_long_input(varLoadList)
-        return self._load.AddAutoCombinationRepeat(
+        retVal = self._load.AddAutoCombinationRepeat(
             varCode,
             varCategory,
             loadList_safe_list,
@@ -2819,6 +2835,9 @@ class OSLoad:
             bVarZ,
             bVarNegtiveZ,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def RemoveLoadCasesFromEnvelop(self, varEnvNo: int, varLoadCaseList: list):
         """
@@ -2833,9 +2852,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if general error.
+        bool
+            True if successful, False otherwise.
 
         Examples
         --------
@@ -2844,7 +2862,8 @@ class OSLoad:
         >>> staad_obj.Load.RemoveLoadCasesFromEnvelop(1, [2, 3])
         """
         safe_LoadCaseList = make_safe_array_long_input(varLoadCaseList)
-        return self._load.RemoveLoadCasesFromEnvelop(varEnvNo, safe_LoadCaseList)
+        retval = self._load.RemoveLoadCasesFromEnvelop(varEnvNo, safe_LoadCaseList)
+        return bool(retval)
 
     def RemoveAttribute(self, lLoadCase: int):
         """
@@ -2857,9 +2876,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if general error.
+        bool
+            True if successful, False otherwise.
 
         Examples
         --------
@@ -2867,7 +2885,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.RemoveAttribute(1)
         """
-        return self._load.RemoveAttribute(lLoadCase)
+        retVal = self._load.RemoveAttribute(lLoadCase)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def ClearPrimaryLoadCase(self, varLoadCaseNos: list, isReferenceLoad: bool):
         """
@@ -2930,10 +2951,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 1 if YES
-            Returns 0 if NO
-            Returns -1 if general error.
+        bool
+            True if dynamic load included in specified load case, False otherwise.
 
         Examples
         --------
@@ -2941,7 +2960,8 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.IsDynamicLoadIncluded(1)
         """
-        return self._load.IsDynamicLoadIncluded(nLoadCase)
+        retVal = self._load.IsDynamicLoadIncluded(nLoadCase)
+        return bool(retVal)
 
     def IsCombinationCase(self, nLoadCase: int):
         """
@@ -2954,10 +2974,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 1 if YES
-            Returns 0 if NO
-            Returns -1 if general error.
+        bool
+            True if specified load case is combination load case, False otherwise.
 
         Examples
         --------
@@ -2965,7 +2983,8 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.IsCombinationCase(1)
         """
-        return self._load.IsCombinationCase(nLoadCase)
+        retVal = self._load.IsCombinationCase(nLoadCase)
+        return bool(retVal)
 
     def SplitLoadsOnBeam(self, varBeamOld: int, varBeamNew: int):
         """
@@ -2980,9 +2999,9 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 1 (TRUE) if Successful
-            Returns 0 (FALSE) if General Error.
+        bool
+            True if Successful
+            False if General Error.
 
         Examples
         --------
@@ -2990,7 +3009,7 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.SplitLoadsOnBeam(1, 2)
         """
-        return self._load.SplitLoadsOnBeam(varBeamOld, varBeamNew)
+        return bool(self._load.SplitLoadsOnBeam(varBeamOld, varBeamNew))
 
     def MergeLoadsOnBeam(self, varBeamToKeep: int, varBeamToMerge: int):
         """
@@ -3006,8 +3025,8 @@ class OSLoad:
         Returns
         -------
         bool
-            Returns 1 (TRUE) if Successful
-            Returns 0 (FALSE) if General Error.
+            True if Successful
+            False if General Error.
 
         Examples
         --------
@@ -3015,7 +3034,7 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.MergeLoadsOnBeam(1, 2)
         """
-        return self._load.SplitLoadsOnBeam(varBeamToKeep, varBeamToMerge)
+        return bool(self._load.MergeLoadsOnBeam(varBeamToKeep, varBeamToMerge))
 
     def BeginLoadMerging(self):
         """
@@ -3119,9 +3138,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if general error.
+        bool
+            True if OK
 
         Example
         -------
@@ -3131,7 +3149,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.ModifySeismicDefinitionParams('ZONE', 0.2)
         """
-        return self._load.ModifySeismicDefinitionParams(varParamName, varValue)
+        retVal = self._load.ModifySeismicDefinitionParams(varParamName, varValue)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def ComputeWallWindPressureProfile(
         self,
@@ -3628,9 +3649,9 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if general error.
+        bool
+            True if OK
+            False if general error.
 
         Examples
         --------
@@ -3638,7 +3659,7 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.DeleteLoadEnvelop(1)
         """
-        return self._load.DeleteLoadEnvelop(varEnvNo)
+        return bool(self._load.DeleteLoadEnvelop(varEnvNo))
 
     def DeleteLoadList(self, varLoadListIndex: int):
         """
@@ -3651,9 +3672,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if general error.
+        bool
+            True if OK
 
         Examples
         --------
@@ -3661,7 +3681,8 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.DeleteLoadList(1)
         """
-        return self._load.DeleteLoadList(varLoadListIndex)
+        retVal = self._load.DeleteLoadList(varLoadListIndex)
+        return bool(retVal)
 
     def DeletePrimaryLoadCases(self, varLoadCaseNos: list, varIsReferenceLoads: bool):
         """
@@ -3676,9 +3697,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if failed to delete load(s)
+        bool
+            True if OK
 
         Examples
         --------
@@ -3687,7 +3707,9 @@ class OSLoad:
         >>> staad_obj.Load.DeletePrimaryLoadCases([1, 2, 3], False)
         """
         loadCaseNoList = make_safe_array_long_input(varLoadCaseNos)
-        return self._load.DeletePrimaryLoadCases(loadCaseNoList, varIsReferenceLoads)
+        return bool(
+            self._load.DeletePrimaryLoadCases(loadCaseNoList, varIsReferenceLoads)
+        )
 
     def DeleteReferenceLoadCases(self, varLoadCaseNos: list):
         """
@@ -3700,9 +3722,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -1 if failed to delete load(s)
+        bool
+            True if OK
 
         Examples
         --------
@@ -3711,7 +3732,7 @@ class OSLoad:
         >>> staad_obj.Load.DeleteReferenceLoadCases([1, 2, 3])
         """
         loadCaseNoList = make_safe_array_long_input(varLoadCaseNos)
-        return self._load.DeleteReferenceLoadCases(loadCaseNoList)
+        return bool(self._load.DeleteReferenceLoadCases(loadCaseNoList))
 
     def DeleteWindDefinition(self, nTypeNo: int):
         """
@@ -3724,9 +3745,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK
-            Returns -8039 if Invalid load definition.
+        bool
+            True if OK
 
         Examples
         --------
@@ -3734,7 +3754,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.DeleteWindDefinition(1)
         """
-        return self._load.DeleteWindDefinition(nTypeNo)
+        retVal = self._load.DeleteWindDefinition(nTypeNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
 
     def DeleteDirectAnalysisDefinitionParameter(self, pParamType: int):
         """
@@ -3821,7 +3844,9 @@ class OSLoad:
         primaryLoadCaseIdArray = make_variant_vt_ref(
             primaryLoadCaseIdList_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        self._load.GetPrimaryLoadCaseNumbers(primaryLoadCaseIdArray)
+        retVal = self._load.GetPrimaryLoadCaseNumbers(primaryLoadCaseIdArray)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return list(primaryLoadCaseIdArray[0])
 
     def GetLoadCombinationCaseCount(self):
@@ -3861,7 +3886,11 @@ class OSLoad:
         loadCombinationLoadCaseIdArray = make_variant_vt_ref(
             loadCombinationCaseId_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        self._load.GetLoadCombinationCaseNumbers(loadCombinationLoadCaseIdArray)
+        retVal = self._load.GetLoadCombinationCaseNumbers(
+            loadCombinationLoadCaseIdArray
+        )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return loadCombinationLoadCaseIdArray[0]
 
     def GetReferenceLoadCount(self):
@@ -3872,7 +3901,6 @@ class OSLoad:
         -------
         int
             Number of reference load items.
-            Returns -1 in case of an error.
 
         Examples
         --------
@@ -3880,7 +3908,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetReferenceLoadCount()
         """
-        return self._load.GetReferenceLoadCount()
+        retVal = self._load.GetReferenceLoadCount()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetReferenceLoadCaseCount(self):
         """
@@ -3890,7 +3921,6 @@ class OSLoad:
         -------
         int
             Number of reference load case items.
-            Returns -1 in case of an error.
 
         Examples
         --------
@@ -3898,7 +3928,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetReferenceLoadCaseCount()
         """
-        return self._load.GetReferenceLoadCaseCount()
+        retVal = self._load.GetReferenceLoadCaseCount()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetReferenceLoadCaseNumbers(self):
         """
@@ -3920,7 +3953,9 @@ class OSLoad:
         refLoadCaseIdArray = make_variant_vt_ref(
             refLoadCaseIdList_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        self._load.GetReferenceLoadCaseNumbers(refLoadCaseIdArray)
+        retVal = self._load.GetReferenceLoadCaseNumbers(refLoadCaseIdArray)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return list(refLoadCaseIdArray[0])
 
     def GetNoOfSetsInReferenceLoad(self, nIndex: int):
@@ -3936,7 +3971,6 @@ class OSLoad:
         -------
         int
             Number of sets in the reference load item.
-            Returns -1 in case of an error.
 
         Examples
         --------
@@ -3944,7 +3978,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetNoOfSetsInReferenceLoad(1)
         """
-        return self._load.GetNoOfSetsInReferenceLoad(nIndex)
+        retVal = self._load.GetNoOfSetsInReferenceLoad(nIndex)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetReferenceLoadByIndex(self, nIndex: int):
         """
@@ -3980,8 +4017,8 @@ class OSLoad:
         retval = self._load.GetReferenceLoadByIndex(
             nIndex, refloadArray_vt, refFactorArray_vt
         )
-        if retval <= 0:
-            return [], []
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
         return list(refloadArray_vt[0]), list(refFactorArray_vt[0])
 
     def GetReferenceLoadType(self, varLoadNo: int):
@@ -3997,7 +4034,6 @@ class OSLoad:
         -------
         int
             Reference load type (0 to 23).
-            Returns -1 in case of an error.
 
         Examples
         --------
@@ -4005,7 +4041,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetReferenceLoadType(1)
         """
-        return self._load.GetReferenceLoadType(varLoadNo)
+        retVal = self._load.GetReferenceLoadType(varLoadNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetReferenceLoadCaseTitle(self, varLoadNo: int):
         """
@@ -4150,7 +4189,6 @@ class OSLoad:
         -------
         int
             Returns active load case number ID.
-            Else -1 if general error.
 
         Examples
         --------
@@ -4158,7 +4196,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetActiveLoad()
         """
-        return self._load.GetActiveLoad()
+        retVal = self._load.GetActiveLoad()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetNodalLoadCount(self, nNodeNo: int):
         """
@@ -4173,7 +4214,6 @@ class OSLoad:
         -------
         int
             Returns the number of node(s).
-            Else -1 if general error (perhaps load case not found).
 
         Examples
         --------
@@ -4181,7 +4221,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetNodalLoadCount(1)
         """
-        return self._load.GetNodalLoadCount(nNodeNo)
+        retVal = self._load.GetNodalLoadCount(nNodeNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetNodalLoads(self, nNodeNo: int):
         """
@@ -4228,9 +4271,11 @@ class OSLoad:
         varMZList = make_variant_vt_ref(
             varMZ_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
-        self._load.GetNodalLoads(
+        retVal = self._load.GetNodalLoads(
             nodeCount, varFXList, varFYList, varFZList, varMXList, varMYList, varMZList
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return (
             varFXList[0],
             varFYList[0],
@@ -4253,7 +4298,6 @@ class OSLoad:
         -------
         int
             Returns the number of uniformly distributed load item(s) applied.
-            Returns -1 if general error
 
         Examples
         --------
@@ -4261,7 +4305,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetUDLLoadCount(1)
         """
-        return self._load.GetUDLLoadCount(nBeamNo)
+        retVal = self._load.GetUDLLoadCount(nBeamNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetUDLLoads(self, nBeamNo: int):
         """
@@ -4316,6 +4363,8 @@ class OSLoad:
         retval = self._load.GetUDLLoads(
             nBeamNo, varDirectionList, varForceList, varD1List, varD2List, varD3List
         )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
         if not bool(retval):
             return ([], [], [], [], [])
         return (
@@ -4339,7 +4388,6 @@ class OSLoad:
         -------
         int
             Returns the number of uniformly distributed (UNI) moment item(s) applied.
-            Returns -1 if general error
 
         Examples
         --------
@@ -4347,7 +4395,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetUNIMomentCount(1)
         """
-        return self._load.GetUNIMomentCount(nBeamNo)
+        retVal = self._load.GetUNIMomentCount(nBeamNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetUNIMoments(self, nBeamNo: int):
         """
@@ -4392,9 +4443,11 @@ class OSLoad:
             varD3_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetUNIMoments(
+        retVal = self._load.GetUNIMoments(
             nBeamNo, varDirectionList, varMomentList, varD1List, varD2List, varD3List
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         UNILoads = []
         for i in range(0, UNILoadCount):
             UNILoads.append(
@@ -4421,7 +4474,6 @@ class OSLoad:
         -------
         int
             Returns the number of trapezoidal load item(s) applied.
-            Returns -1 if general error
 
         Examples
         --------
@@ -4429,7 +4481,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetTrapLoadCount(1)
         """
-        return self._load.GetTrapLoadCount(nBeamNo)
+        retVal = self._load.GetTrapLoadCount(nBeamNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetTrapLoads(self, nBeamNo: int):
         """
@@ -4473,9 +4528,11 @@ class OSLoad:
             varD2_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetTrapLoads(
+        retVal = self._load.GetTrapLoads(
             nBeamNo, varDirectionList, varW1List, varW2List, varD1List, varD2List
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         TrapezodialLoads = []
         for i in range(0, TrapezodialLoadCount):
             TrapezodialLoads.append(
@@ -4502,7 +4559,6 @@ class OSLoad:
         -------
         int
             Returns the number of concentrated force item(s) applied.
-            Returns -1 if general error
 
         Examples
         --------
@@ -4510,7 +4566,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetConcForceCount(1)
         """
-        return self._load.GetConcForceCount(nBeamNo)
+        retVal = self._load.GetConcForceCount(nBeamNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetConcForces(self, nBeamNo: int):
         """
@@ -4551,9 +4610,11 @@ class OSLoad:
             varD2_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetConcForces(
+        retVal = self._load.GetConcForces(
             nBeamNo, varDirectionList, varForceList, varD1List, varD2List
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         ConcForces = []
         for i in range(0, ConcForceCount):
             ConcForces.append(
@@ -4579,7 +4640,6 @@ class OSLoad:
         -------
         int
             Returns the number of concentrated moment item(s) applied.
-            Returns -1 if general error
 
         Examples
         --------
@@ -4587,7 +4647,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetConcMomentCount(1)
         """
-        return self._load.GetConcMomentCount(nBeamNo)
+        retVal = self._load.GetConcMomentCount(nBeamNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetConcMoments(self, nBeamNo: int):
         """
@@ -4611,6 +4674,8 @@ class OSLoad:
         """
 
         ConcForceCount = self._load.GetConcForceCount(nBeamNo)
+        if ConcForceCount < 0:
+            raise_os_error_if_error_code(ConcForceCount)
         varDirection_safe_list = make_safe_array_long(ConcForceCount)
         varMoment_safe_list = make_safe_array_double(ConcForceCount)
         varD1_safe_list = make_safe_array_double(ConcForceCount)
@@ -4628,9 +4693,11 @@ class OSLoad:
             varD2_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetConcForces(
+        retVal = self._load.GetConcForces(
             nBeamNo, varDirectionList, varMomentList, varD1List, varD2List
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         ConcForces = []
         for i in range(0, ConcForceCount):
             ConcForces.append(
@@ -4737,7 +4804,6 @@ class OSLoad:
         -------
         str
             Returns the number of pressure load(s).
-            Returns -1 if General error.
 
         Examples
         --------
@@ -4745,7 +4811,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetElementPressureLoadCount(1)
         """
-        return self._load.GetElementPressureLoadCount(varPlateNo)
+        retVal = self._load.GetElementPressureLoadCount(varPlateNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetElementPressureLoads(self, varPlateNo: int):
         """
@@ -4794,7 +4863,7 @@ class OSLoad:
             varY2_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetElementPressureLoads(
+        retVal = self._load.GetElementPressureLoads(
             PressureLoadCount,
             varDirectionList,
             varW1List,
@@ -4803,6 +4872,8 @@ class OSLoad:
             varX2List,
             varY2List,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         PressureLoads = []
         for i in range(0, PressureLoadCount):
             PressureLoads.append(
@@ -4830,7 +4901,6 @@ class OSLoad:
         -------
         int
             Returns the number of concentrated load on specified plate.
-            Returns -1 if General error.
 
         Examples
         --------
@@ -4838,7 +4908,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetElementConcLoadCount(1)
         """
-        return self._load.GetElementConcLoadCount(varPlateNo)
+        retVal = self._load.GetElementConcLoadCount(varPlateNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetElementConcLoads(self, varPlateNo: int):
         """
@@ -4879,9 +4952,11 @@ class OSLoad:
             varY1_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetElementConcLoads(
+        retVal = self._load.GetElementConcLoads(
             ConcentratedLoadCount, varDirectionList, varW1List, varX1List, varY1List
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         ConcentratedLoads = []
         for i in range(0, ConcentratedLoadCount):
             ConcentratedLoads.append(
@@ -4930,7 +5005,6 @@ class OSLoad:
             Returns 21 if Gravity.
             Returns 22 if Push.
             Returns 23 if None.
-            Returns -1 if General error.
 
         Examples
         --------
@@ -4938,7 +5012,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetLoadType(1)
         """
-        return self._load.GetLoadType(varLoadNo)
+        retVal = self._load.GetLoadType(varLoadNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetLoadListCount(self):
         """
@@ -4948,7 +5025,6 @@ class OSLoad:
         -------
         int
             Returns the number of load list(s).
-            Returns -1 if General error.
 
         Examples
         --------
@@ -4956,7 +5032,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetLoadListCount()
         """
-        return self._load.GetLoadListCount()
+        retVal = self._load.GetLoadListCount()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetLoadCountInLoadList(self, varLoadListIndex: int):
         """
@@ -5021,9 +5100,8 @@ class OSLoad:
 
         Returns
         -------
-        int
-            Returns 0 if OK.
-            Returns -1 if General error.
+        bool
+            True if OK.
 
         Examples
         --------
@@ -5031,7 +5109,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetAttribute(1)
         """
-        return self._load.GetAttribute(lLoadCase)
+        retVal = self._load.GetAttribute(lLoadCase)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return True
 
     def GetRepeatLoadCount(self):
         """
@@ -5064,7 +5145,6 @@ class OSLoad:
         -------
         int
             Returns number of load and factor pairs associated with a given repeat load command in the active load case.
-            Returns -1 if case of invalid repeat load index.
 
         Examples
         --------
@@ -5072,7 +5152,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetNoLoadFactorInRepeatLoad(1)
         """
-        return self._load.GetNoLoadFactorInRepeatLoad(nIndex)
+        retVal = self._load.GetNoLoadFactorInRepeatLoad(nIndex)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetRepeatLoadByIndex(self, nIndex: int):
         """
@@ -5104,7 +5187,11 @@ class OSLoad:
         varLoadFactorList = make_variant_vt_ref(
             varLoadFactor_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
-        self._load.GetRepeatLoadByIndex(nIndex, varLoadCaseList, varLoadFactorList)
+        retVal = self._load.GetRepeatLoadByIndex(
+            nIndex, varLoadCaseList, varLoadFactorList
+        )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
         loadCaseToFactor = {}
         for i in range(0, loadSizeCount):
@@ -5125,7 +5212,6 @@ class OSLoad:
         -------
         int
             Returns the number of linear varying load item(s) applied.
-            Returns -1 if General Error
 
         Examples
         --------
@@ -5133,7 +5219,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetLinearVaryingLoadCount(1)
         """
-        return self._load.GetLinearVaryingLoadCount(nBeamNo)
+        retVal = self._load.GetLinearVaryingLoadCount(nBeamNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetLinearVaryingLoads(self, nBeamNo: int):
         """
@@ -5174,9 +5263,11 @@ class OSLoad:
             varW3_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetLinearVaryingLoads(
+        retVal = self._load.GetLinearVaryingLoads(
             LinearVaryingLoadCount, varDirectionList, varW1List, varW2List, varW3List
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         LinearVaryingLoads = []
         for i in range(0, LinearVaryingLoadCount):
             LinearVaryingLoads.append(
@@ -5474,9 +5565,11 @@ class OSLoad:
             varDistance_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetElementLoadInfo(
+        retVal = self._load.GetElementLoadInfo(
             loadIndex, varDirection, varForceList, varDistanceList
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         Loads = [varDirection[0], varForceList[0], varDistanceList[0]]
         return Loads
 
@@ -5488,7 +5581,6 @@ class OSLoad:
         -------
         int
             Returns the number of Notional load
-            Returns -1 if general error.
 
         Examples
         --------
@@ -5496,7 +5588,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetNotionalLoadCount()
         """
-        return self._load.GetNotionalLoadCount()
+        retVal = self._load.GetNotionalLoadCount()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetNoLoadFactorDirectionInNotionalLoad(self, nIndex: int):
         """
@@ -5511,7 +5606,6 @@ class OSLoad:
         -------
         int
             Returns the factor for specified Notional load.
-            Returns -1 if general error.
 
         Examples
         --------
@@ -5519,7 +5613,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetNoLoadFactorDirectionInNotionalLoad(1)
         """
-        return self._load.GetNoLoadFactorDirectionInNotionalLoad(nIndex)
+        retVal = self._load.GetNoLoadFactorDirectionInNotionalLoad(nIndex)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetNotionalLoadByIndex(self, nIndex: int):
         """
@@ -5542,6 +5639,8 @@ class OSLoad:
         >>> staad_obj.Load.GetNotionalLoadByIndex(1)
         """
         notionalloadCount = self._load.GetNoLoadFactorDirectionInNotionalLoad(nIndex)
+        if notionalloadCount < 0:
+            raise_os_error_if_error_code(notionalloadCount)
         Direction_safe_list = make_safe_array_long(notionalloadCount)
         LoadCase_safe_list = make_safe_array_double(notionalloadCount)
         Factor_safe_list = make_safe_array_double(notionalloadCount)
@@ -5555,9 +5654,11 @@ class OSLoad:
             Factor_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        self._load.GetElementLoadInfo(
+        retVal = self._load.GetElementLoadInfo(
             notionalloadCount, LoadCaseList, FactorList, DirectionList
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         Loads = []
         for i in range(0, notionalloadCount):
             Loads.append((DirectionList[0][i], LoadCaseList[0][i], FactorList[0][i]))
@@ -5576,7 +5677,6 @@ class OSLoad:
         -------
         int
             Returns the number of loaditems in the specified load case.
-            Returns -1 if general error.
 
         Examples
         --------
@@ -5584,7 +5684,10 @@ class OSLoad:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.GetLoadItemsCount(1)
         """
-        return self._load.GetLoadItemsCount(loadCaseNo)
+        retVal = self._load.GetLoadItemsCount(loadCaseNo)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetLoadItemType(self, loadCaseNo: int, loadItemIndex: int):
         """
@@ -5745,9 +5848,11 @@ class OSLoad:
             safe_NumberofLoadCasesInEnvelope, automation.VT_I4
         )
 
-        self._load.GetLoadEnvelopeDetails(
+        retVal = self._load.GetLoadEnvelopeDetails(
             EnvNo, EnvelopeType, NumberofLoadCasesInEnvelope
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
         return (EnvelopeType[0], NumberofLoadCasesInEnvelope[0])
 
     def GetLoadListfromLoadEnvelope(self, EnvNo: int):
@@ -5777,6 +5882,8 @@ class OSLoad:
         )
 
         retval = self._load.GetLoadListfromLoadEnvelope(EnvNo, LoadCaseList)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
         if retval <= 0:
             return []
         return list(retval)
@@ -5801,4 +5908,7 @@ class OSLoad:
         EnvelopeIdList = make_variant_vt_ref(
             EnvelopeId_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._load.GetEnvelopeIDs(EnvelopeIdList)
+        retVal = self._load.GetEnvelopeIDs(EnvelopeIdList)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal

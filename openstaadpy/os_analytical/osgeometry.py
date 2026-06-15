@@ -179,7 +179,6 @@ class OSGeometry:
         -------
         int
             The last node number.
-            - 1 : General error.
 
         Examples
         --------
@@ -696,7 +695,9 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.ClearMemberSelection()
         """
-        self._geometry.ClearMemberSelection()
+        retVal = self._geometry.ClearMemberSelection()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def SelectMultipleBeams(self, beam_ids: list):
         """
@@ -802,7 +803,9 @@ class OSGeometry:
             group_names_safe_array, automation.VT_ARRAY | automation.VT_BSTR
         )
 
-        self._geometry.GetGroupNames(grouptype, group_names)
+        retVal = self._geometry.GetGroupNames(grouptype, group_names)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
         return list(group_names[0])
 
@@ -1189,7 +1192,9 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.ClearPlateSelection()
         """
-        self._geometry.ClearPlateSelection()
+        retVal = self._geometry.ClearPlateSelection()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def CreateSolid(
         self,
@@ -1509,7 +1514,10 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> last_solid = staad_obj.Geometry.GetLastSolidNo()
         """
-        return int(self._geometry.GetLastSolidNo())
+        retVal = self._geometry.GetLastSolidNo()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return int(retVal)
 
     def GetNoOfSelectedPlates(self):
         """
@@ -1862,8 +1870,8 @@ class OSGeometry:
         vt_D = make_variant_vt_ref(safe_n4, automation.VT_I4)
 
         retval = int(self._geometry.GetPlateIncidence(plateNo, vt_A, vt_B, vt_C, vt_D))
-        if retval != 0:
-            raise Exception(f"Error retrieving plate incidence: {retval}")
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
         return (vt_A[0], vt_B[0], vt_C[0], vt_D[0])
 
     def GetSolidIncidence(self, solidNo):
@@ -1922,7 +1930,9 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.ClearNodeSelection()
         """
-        self._geometry.ClearNodeSelection()
+        retVal = self._geometry.ClearNodeSelection()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def ClearSolidSelection(self):
         """
@@ -1938,7 +1948,9 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.ClearSolidSelection()
         """
-        self._geometry.ClearSolidSelection()
+        retVal = self._geometry.ClearSolidSelection()
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def SetNodeUniqueID(self, nodeNo: int, uniqueID: str):
         """
@@ -2485,7 +2497,9 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.DeleteGroup("GroupA")
         """
-        self._geometry.DeleteGroup(groupName)
+        retVal = self._geometry.DeleteGroup(groupName)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def UpdateGroup(self, groupName: str, update_option: int, entityList: list[int]):
         """
@@ -2519,9 +2533,11 @@ class OSGeometry:
         >>> staad_obj.Geometry.UpdateGroup("GroupA", [1,2,3])
         """
         vt_entityList = make_safe_array_long_input(entityList)
-        self._geometry.UpdateGroup(
+        retVal = self._geometry.UpdateGroup(
             groupName, update_option, len(entityList), vt_entityList
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def DefineParametricSurface(
         self,
@@ -2679,7 +2695,9 @@ class OSGeometry:
         -------
         None
         """
-        self._geometry.AddDensityPointToSurface(surfaceNo, pointData)
+        retVal = self._geometry.AddDensityPointToSurface(surfaceNo, pointData)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def AddDensityLineToSurface(
         self,
@@ -2816,7 +2834,9 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.AddPolygonalRegionToSurface(1, regionData)
         """
-        self._geometry.AddPolygonalRegionToSurface(surfaceNo, regionData)
+        retVal = self._geometry.AddPolygonalRegionToSurface(surfaceNo, regionData)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
     def GetParametricSurfaceCount(self):
         """
@@ -3008,7 +3028,7 @@ class OSGeometry:
             surfaceNo, node_count_ref, element_count_ref
         )
         if retval <= 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(retval)
         return (node_count_ref[0], element_count_ref[0])
 
     def GetParametricSurfaceMeshData(self, surfaceNo: int):
@@ -3045,7 +3065,7 @@ class OSGeometry:
             surfaceNo, nodes_ref, elements_ref
         )
         if retval <= 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(retval)
 
         return (list(nodes_ref[0]), list(elements_ref[0]))
 
@@ -3405,7 +3425,7 @@ class OSGeometry:
             method, vt_beamList, tolerance, vt_newIds_ref
         )
         if retval <= 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(retval)
         return list(vt_newIds_ref[0])
 
     def MergeBeams(
@@ -3543,7 +3563,7 @@ class OSGeometry:
             vt_nodeList, vt_brokenIds_ref, vt_newIds_ref
         )
         if retval <= 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(retval)
         return (list(vt_brokenIds_ref[0]), list(vt_newIds_ref[0]))
 
     def GetIntersectBeamsCount(self, beamList: list, tolerance: float):
@@ -3700,7 +3720,7 @@ class OSGeometry:
             vt_memberList, automation.VT_ARRAY | automation.VT_I4
         )
         retval = self._geometry.GetAnalyticalMembersForPhysicalMember(
-            physicalMemberId, vt_memberList_ref
+            physicalMemberId, count, vt_memberList_ref
         )
         if retval <= 0:
             raise_os_error_if_error_code(retval)
@@ -3723,6 +3743,8 @@ class OSGeometry:
         >>> print(last_no)
         """
         retval = self._geometry.GetLastPhysicalMemberNo()
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
         return int(retval)
 
     def GetNoOfSelectedPhysicalMembers(self):
@@ -4206,7 +4228,7 @@ class OSGeometry:
             nodeH_ref,
         )
         if retval <= 0:
-            raise_os_error_if_error_code(-1)
+            raise_os_error_if_error_code(retval)
         return (
             unique_str_id_ref[0],
             nodeA_ref[0],
