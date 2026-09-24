@@ -2,7 +2,11 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
     create_bstr,
     make_byref,
     make_safe_array_double,
@@ -13,8 +17,6 @@ from .openStaadHelper import (
     make_safe_str,
     make_variant_vt_ref,
 )
-from comtypes import automation
-from comtypes import CoInitialize
 from .oserrors import OsErrorBase, raise_os_error_if_error_code
 
 
@@ -79,6 +81,7 @@ class OSProperty:
             "GetSectionPropertyName",
             "GetSectionPropertyType",
             "GetSectionPropertyCountry",
+            "GetMaterialPropertyCount",
             "GetIsotropicMaterialCount",
             "GetIsotropicMaterialProperties",
             "GetOrthotropic2DMaterialCount",
@@ -108,11 +111,6 @@ class OSProperty:
             "DeleteMemberAttribute",
             "GetMemberCountByAttribute",
             "GetMemberListByAttribute",
-            "CreateElementAttribute",
-            "AssignElementAttribute",
-            "DeleteElementAttribute",
-            "GetElementCountByAttribute",
-            "GetElementListByAttribute",
             "GetAssignedAttributeCount",
             "GetAssignedAttributeByIndex",
             "RemoveAttribute",
@@ -238,7 +236,7 @@ class OSProperty:
 
     def AssignBeamProperty(self, beam_ids: list | int, property_id: int):
         """
-        Assign beam property to a single or multiple beams.
+        Assign property with given property id to a single or multiple beams.
 
         Parameters
         ----------
@@ -250,7 +248,7 @@ class OSProperty:
         Returns
         -------
         bool
-            - True if it succeeds
+            'true' if it successfully assigns the property to beam(s).
 
         Examples
         --------
@@ -274,13 +272,11 @@ class OSProperty:
             beamId_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
         retVal = self._property.AssignBeamProperty(beamId_Array_vt, property_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AssignPlateThickness(self, plate_ids: list, thickness_property_id: int):
         """
-        Assigns a plate thickness property to the specified plates.
+        Assigns a plate thickness property with given property id to a single or multiple specified plates.
 
         Parameters
         ----------
@@ -293,7 +289,7 @@ class OSProperty:
         Returns
         -------
         bool
-            - True if it succeeds
+            'true' if it successfully assigns the property to plate(s).
 
         Examples
         --------
@@ -318,19 +314,19 @@ class OSProperty:
 
     def AssignMemberSpecToBeam(self, beam_ids: list | int, spec_id: int):
         """
-        Assign a member specification to specified beams.
+        Assigns a member specification with given specification id to a single or multiple specified beams.
 
         Parameters
         ----------
         beam_ids : list of int or int
             List of member numbers to assign the specification to.
         spec_id : int
-            The ID of the member specification.
+            Zero based index of the member specification.
 
         Returns
         -------
         bool
-            - True if it succeeds
+            'true' if it successfully assigns the member specification to beam(s).
 
 
         Examples
@@ -347,32 +343,31 @@ class OSProperty:
             beam_ids_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
         retVal = self._property.AssignMemberSpecToBeam(beam_ids_array_vt, spec_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AssignMaterialToPlate(self, material_name: str, plate_ids: list | int):
         """
-        Assign a material property to specified plates.
+        Gets the material of specified name and assigns it to a single or multiple specified plates.
 
         Parameters
         ----------
         material_name : str
-            The ID of the material property.
-        plate_ids : list of int
-            List of plate numbers to assign the material to.
+            Identification title for material.
+        plate_ids : list of int or int
+            List of plate numbers or single plate number to assign the material to.
 
         Returns
         -------
         bool
-            - True if it succeeds
+            'true' if it successfully assigns the material to plate(s).
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> plate_list = staad_obj.Geometry.GetPlateList()
-        >>> status = staad_obj.Property.AssignMaterialToPlate("CONCRETE1", plate_list)
+        >>> status = staad_obj.Property.AssignMaterialToPlate("CONCRETE", plate_list[0:3])
+        >>> status = staad_obj.Property.AssignMaterialToPlate("STEEL", plate_list[4])
         """
         if isinstance(plate_ids, int):
             plate_ids = [plate_ids]
@@ -385,9 +380,9 @@ class OSProperty:
             raise_os_error_if_error_code(retVal)
         return retVal == 0
 
-    def AssignMaterialToMember(self, material_name: str, member_ids: list):
+    def AssignMaterialToMember(self, material_name: str, member_ids: list | int):
         """
-        Assign a material property to specified members.
+        Assigns a material property with given material name to a single or multiple specified members.
 
         Parameters
         ----------
@@ -399,8 +394,7 @@ class OSProperty:
         Returns
         -------
         bool
-            - 'True' if it succeeds
-            - 'False' if it fails
+            'true' if it successfully assigns the material to member(s).
 
         Examples
         --------
@@ -414,7 +408,12 @@ class OSProperty:
         member_ids_array_vt = make_variant_vt_ref(
             member_ids_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignMaterialToMember(material_name, member_ids_array_vt)
+        retVal = self._property.AssignMaterialToMember(
+            material_name, member_ids_array_vt
+        )
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return bool(retVal)
 
     def CreatePlateThicknessProperty(self, thickness_list: list):
         """
@@ -423,12 +422,12 @@ class OSProperty:
         Parameters
         ----------
         thickness_list : list of float
-            The thickness value for the plate.
+            List of length 4 consisting of the thickness values for the plate.
 
         Returns
         -------
         int
-            id of the created plate thickness property if successful.
+            Property id of the plate thickness property if created successful.
 
         Examples
         --------
@@ -444,6 +443,11 @@ class OSProperty:
         retVal = self._property.CreatePlateThicknessProperty(thickness_array_vt)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        if retVal == 0:
+            raise OsErrorBase(
+                "Plate Thickness Property was not created",
+                -1,
+            )
         return retVal
 
     def CreateBeamPropertyFromTable(
@@ -461,41 +465,83 @@ class OSProperty:
         ----------
         country_code : int
             Code resembling specific country:
-                +--------------+----------------------+
-                | Country Code | Country              |
-                +==============+======================+
-                | 1            | American             |
-                +--------------+----------------------+
-                | 2            | Australian           |
-                +--------------+----------------------+
-                | 3            | British              |
-                +--------------+----------------------+
-                | 4            | Canadian             |
-                +--------------+----------------------+
-                | 5            | Chinese              |
-                +--------------+----------------------+
-                | 6            | Dutch                |
-                +--------------+----------------------+
-                | 7            | European             |
-                +--------------+----------------------+
-                | 8            | French               |
-                +--------------+----------------------+
-                | 9            | German               |
-                +--------------+----------------------+
-                | 10           | Indian               |
-                +--------------+----------------------+
-                | 11           | Japanese             |
-                +--------------+----------------------+
-                | 12           | Russian              |
-                +--------------+----------------------+
-                | 13           | SouthAfrican         |
-                +--------------+----------------------+
-                | 14           | Spanish              |
-                +--------------+----------------------+
-                | 15           | Venezuelan           |
-                +--------------+----------------------+
-                | 16           | Korean               |
-                +--------------+----------------------+
+                +--------------+------------------------+
+                | Country Code | Country                |
+                +==============+========================+
+                | 1            | American               |
+                +--------------+------------------------+
+                | 2            | Australian             |
+                +--------------+------------------------+
+                | 3            | British                |
+                +--------------+------------------------+
+                | 4            | Canadian               |
+                +--------------+------------------------+
+                | 5            | Chinese                |
+                +--------------+------------------------+
+                | 6            | Dutch                  |
+                +--------------+------------------------+
+                | 7            | European               |
+                +--------------+------------------------+
+                | 8            | French                 |
+                +--------------+------------------------+
+                | 9            | German                 |
+                +--------------+------------------------+
+                | 10           | Indian                 |
+                +--------------+------------------------+
+                | 11           | Japanese               |
+                +--------------+------------------------+
+                | 12           | Russian                |
+                +--------------+------------------------+
+                | 13           | SouthAfrican           |
+                +--------------+------------------------+
+                | 14           | Spanish                |
+                +--------------+------------------------+
+                | 15           | Venezuelan             |
+                +--------------+------------------------+
+                | 16           | Korean                 |
+                +--------------+------------------------+
+                | 17           | Aluminum               |
+                +--------------+------------------------+
+                | 18           | American cold formed   |
+                +--------------+------------------------+
+                | 19           | Indian cold formed     |
+                +--------------+------------------------+
+                | 20           | Mexican                |
+                +--------------+------------------------+
+                | 21           | American Steel Joist   |
+                +--------------+------------------------+
+                | 22           | AITCTimber             |
+                +--------------+------------------------+
+                | 23           | Lysaght cold formed    |
+                +--------------+------------------------+
+                | 24           | British cold formed    |
+                +--------------+------------------------+
+                | 25           | Canadian Timber        |
+                +--------------+------------------------+
+                | 26           | Butler cold formed     |
+                +--------------+------------------------+
+                | 27           | Kingspan cold formed   |
+                +--------------+------------------------+
+                | 28           | RCeco cold formed      |
+                +--------------+------------------------+
+                | 29           | Japanese cold formed   |
+                +--------------+------------------------+
+                | 30           | Australian cold formed |
+                +--------------+------------------------+
+                | 31           | Russian cold formed    |
+                +--------------+------------------------+
+                | 32           | STOASChM               |
+                +--------------+------------------------+
+                | 33           | Jindal                 |
+                +--------------+------------------------+
+                | 34           | European cold formed   |
+                +--------------+------------------------+
+                | 35           | Tata Structura         |
+                +--------------+------------------------+
+                | 36           | Brazilian              |
+                +--------------+------------------------+
+                | 37           | APL Apollo Tubes       |
+                +--------------+------------------------+
         section_name : str
             Name of the section
         type_spec : int
@@ -517,7 +563,7 @@ class OSProperty:
         Returns
         -------
         int
-            The ID of the created beam property if successful else returns 0 if it is unable to create property.
+            Property ID of the newly created beam property if successful.
 
         Examples
         --------
@@ -530,9 +576,15 @@ class OSProperty:
         >>> add_spec_2 = 0.0
         >>> property_id = openstaad.Property.CreateBeamPropertyFromTable(country_code, section_name, type_spec, add_spec_1, add_spec_2)
         """
-        return self._property.CreateBeamPropertyFromTable(
+        retVal = self._property.CreateBeamPropertyFromTable(
             country_code, section_name, type_spec, add_spec_1, add_spec_2
         )
+        if retVal == 0:
+            raise OsErrorBase(
+                "Unable to create beam property.",
+                -1,
+            )
+        return retVal
 
     def CreateAnglePropertyFromTable(
         self,
@@ -547,7 +599,7 @@ class OSProperty:
         Parameters
         ----------
         country_code : int
-            Code resembling specific country.
+            Code resembling specific country. Refer to 'country_code' parameter in 'Property.CreateBeamPropertyFromTable' API.
         section_name : str
             The section name in the table.
         specification_type_no : int
@@ -566,7 +618,7 @@ class OSProperty:
                 |12     |SA         |Double angle in a star arrangement (heel to heel)[for Aluminum]                |
                 +-------+-----------+-------------------------------------------------------------------------------+
         add_spec : float
-            Additional Specification Value :
+            Additional Specification Value (SP):
                 +-------------+---------------------------+
                 | Spec Value  | Specification Description |
                 +=============+===========================+
@@ -588,21 +640,27 @@ class OSProperty:
         Returns
         -------
         int
-            The ID of the created beam property if successful else returns 0 if it is unable to create property.
+            Property ID of the newly created angle beam property if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> openstaad = os_analytical.connect()
-        >>> country_code = 6
-        >>> section_name = "HE100A"
+        >>> country_code = 1
+        >>> section_name = "L20203"
         >>> specification_type_no = 0
         >>> add_spec = 0.0
         >>> property_id = openstaad.Property.CreateAnglePropertyFromTable(country_code, section_name, specification_type_no, add_spec)
         """
-        return self._property.CreateAnglePropertyFromTable(
+        retVal = self._property.CreateAnglePropertyFromTable(
             country_code, section_name, specification_type_no, add_spec
         )
+        if retVal == 0:
+            raise OsErrorBase(
+                "Unable to create angle property.",
+                -1,
+            )
+        return retVal
 
     def CreateMemberOffsetSpec(
         self,
@@ -613,7 +671,7 @@ class OSProperty:
         offset_z: float,
     ):
         """
-        Create a member offset specification.
+        Create a MEMBER OFFSET specification.
 
         Parameters
         ----------
@@ -631,7 +689,7 @@ class OSProperty:
         Returns
         -------
         int
-            The id of the created member offset specification if successful else returns 0 if it is unable to create property.
+            The Specification ID of the newly created member offset specification if successful.
 
         Examples
         --------
@@ -639,9 +697,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> spec_id = staad_obj.Property.CreateMemberOffsetSpec(0, 0, 0.5, 0.0, 0.0)
         """
-        return self._property.CreateMemberOffsetSpec(
+        retVal = self._property.CreateMemberOffsetSpec(
             offset_location, offset_with_respect_to, offset_x, offset_y, offset_z
         )
+        return retVal
 
     def CreateMemberReleaseSpec(
         self, offset_location: int, dof_values: list, spring_constant_values: list
@@ -654,20 +713,20 @@ class OSProperty:
         offset_location: int
             The offset location at START (= 0) or END (= 1) of the member.
         dof_values : list of int
-            Degrees of freedom: No Release (= 0) or Release (= 1) for FX, FY, FZ, MX, MY and MZ.
+            List of 6 integers specifying the release condition for each degree of freedom in the following order: FX, FY, FZ, MX, MY, MZ. 0 for no release and 1 for release.
         spring_constant_values : list of float
             The variable spring constants KFX, KFY, KFZ, KMX, KMY and KMZ.
 
         Returns
         -------
         int
-            Returns the ID of the created member release specification if successful.
+            The Specification ID of the newly created member release specification if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
-        >>> staad_obj = os_analytical.connect()
-        >>> property_id = staad_obj.Property.CreateMemberReleaseSpec(0, [0, 1, 0, 0, 0, 1], [0, 75, 0, 0, 0, 50])
+        >>> openstaad = os_analytical.connect()
+        >>> property_id = openstaad.Property.CreateMemberReleaseSpec(0, [0, 1, 0, 0, 0, 1], [0, 75, 0, 0, 0, 50])
         """
         dof_values_safe_list = make_safe_array_long_input(dof_values)
         spring_constant_values_safe_list = make_safe_array_double_input(
@@ -688,22 +747,21 @@ class OSProperty:
             raise_os_error_if_error_code(result)
         return result
 
-    def GetMemberReleaseSpec(self, member_no: int, end: int):
+    def GetMemberReleaseSpec(self, beam_no: int, end: int):
         """
         Get the release specification for a member at the specified end.
 
         Parameters
         ----------
-        member_no : int
-            The member number.
+        beam_no : int
+            Beam ID number.
         end: int
-            Sets End at start if passed '0' else at the end if passed '1', for which you want release specification.
+            Specify the end for which the release specification is returned: '0' for start and '1' for end.
 
         Returns
         -------
         Tuple : Tuple(List, List)
-            Tuple consisting of List of Release Values (6 elements for 6 DOFs. Element value: No release or spring = 0, release = 1, spring = -1, Only MP defined = -3 , MPX, MPY or MPZ defined = -2 .) & Spring Constant Values (Rotational releases float list with 6 elements for 6 DOFs. Element values Spring value or partial moment factor in floating point number) for the member (in same order).
-
+            A tuple of two lists: translational release values and rotational release values for FX, FY, FZ, MX, MY, and MZ.
 
         Examples
         --------
@@ -721,11 +779,14 @@ class OSProperty:
             spring_constant_values_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
         result = self._property.GetMemberReleaseSpec(
-            member_no, end, release_values_array_vt, spring_constant_values_array_vt
+            beam_no, end, release_values_array_vt, spring_constant_values_array_vt
         )
         if not result:
             raise_os_error_if_error_code(-1)
-        return (release_values_array_vt[0], spring_constant_values_array_vt[0])
+        return (
+            list(release_values_array_vt[0]),
+            list(spring_constant_values_array_vt[0]),
+        )
 
     def GetPlateThickness(self, plate_no: int):
         """
@@ -738,7 +799,7 @@ class OSProperty:
 
         Returns
         -------
-        List : Float list
+        List : list of float
             The thickness of nodes in the plate.
 
         Examples
@@ -753,8 +814,8 @@ class OSProperty:
             safe_array, automation.VT_ARRAY | automation.VT_R8
         )
         result = self._property.GetPlateThickness(plate_no, thickness_array_vt)
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise_os_error_if_error_code(-1)
         return list(thickness_array_vt[0])
 
     def GetBeamPropertyAll(self, beam_id: int):
@@ -768,8 +829,8 @@ class OSProperty:
 
         Returns
         -------
-        tuple : tuple<float, float, float, float, float, float, float, float, float, float>
-            Tuple of short member properties consisting of width of the section, depth of the section,
+        tuple : tuple of floats
+            Tuple consisting values of width of the section, depth of the section,
             cross section area, shear area in local y-axis, shear area in local z-axis.
             Moment of inertia about local z-axis, moment of inertia about local y-axis, torsional constant
             thickness of top flange and thickness of web respectively.
@@ -816,7 +877,7 @@ class OSProperty:
         result = self._property.GetBeamPropertyAll(
             beam_id, width, depth, ax, ay, az, mIz, mIy, iz, tf, tw
         )
-        if result != 1:
+        if not result:
             raise_os_error_if_error_code(-1)
         return (
             width[0],
@@ -842,13 +903,13 @@ class OSProperty:
 
         Returns
         -------
-        tuple : tuple<float, float, float, float, float, float, float, float>
-            Tuple of short member properties consisting of width of the section, depth of the section,
+        tuple : tuple of float
+            A tuple of short member properties consisting of width of the section, depth of the section,
             cross section area, shear area in local y-axis, shear area in local z-axis.
             moment of inertia about local z-axis, moment of inertia about local y-axis and torsional constant
             respectively.
 
-            If shear area in local y-axis & z-axis is zero, shear deformation is ignored in the analysis.
+            Note: If shear area in local y-axis & z-axis is zero, shear deformation is ignored in the analysis.
 
         Examples
         --------
@@ -888,13 +949,13 @@ class OSProperty:
             raise_os_error_if_error_code(-1)
         return width[0], depth[0], ax[0], ay[0], az[0], mIz[0], mIy[0], iz[0]
 
-    def GetMaterialProperty(self, MaterialName: str):
+    def GetMaterialProperty(self, material_name: str):
         """
-        Get a specific material property.
+        Get material constants based on specific material name.
 
         Parameters
         ----------
-        MaterialName : str
+        material_name : str
             The Name of the material .
 
         Returns
@@ -924,9 +985,9 @@ class OSProperty:
         damp_ratio = make_variant_vt_ref(safe_damp_ratio, automation.VT_R8)
 
         result = self._property.GetMaterialProperty(
-            MaterialName, elasticity, possion, density, alpha, damp_ratio
+            material_name, elasticity, possion, density, alpha, damp_ratio
         )
-        if result < 0:
+        if not result:
             raise_os_error_if_error_code(result)
         return elasticity[0], possion[0], density[0], alpha[0], damp_ratio[0]
 
@@ -942,7 +1003,7 @@ class OSProperty:
         Returns
         -------
         str
-            The material name.
+            Material name of beam.
 
         Examples
         --------
@@ -951,7 +1012,13 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> material_name = staad_obj.Property.GetBeamMaterialName(beam_ids[0])
         """
-        return self._property.GetBeamMaterialName(beam_id)
+        material_name = str(self._property.GetBeamMaterialName(beam_id))
+        if not material_name:
+            raise OsErrorBase(
+                "Unable to get beam material name.",
+                -1,
+            )
+        return material_name
 
     def GetElementMaterialName(self, element_id: int):
         """
@@ -965,16 +1032,22 @@ class OSProperty:
         Returns
         -------
         str
-            The material name.
+            Material name of element.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> solid_ids = staad_obj.Geometry.GetSolidList()
-        >>> material_name = staad_obj.Property.GetSolidMaterialName(solid_ids[0])
+        >>> plate_ids = staad_obj.Geometry.GetPlateList()
+        >>> material_name = staad_obj.Property.GetElementMaterialName(plate_ids[0])
         """
-        return self._property.GetElementMaterialName(element_id)
+        material_name = str(self._property.GetElementMaterialName(element_id))
+        if not material_name:
+            raise OsErrorBase(
+                "Unable to get element material name.",
+                -1,
+            )
+        return material_name
 
     def GetPlateMaterialName(self, plate_id: int):
         """
@@ -988,7 +1061,7 @@ class OSProperty:
         Returns
         -------
         str
-            The material name.
+            Material name of plate.
 
         Examples
         --------
@@ -997,11 +1070,17 @@ class OSProperty:
         >>> plate_ids = staad_obj.Geometry.GetPlateList()
         >>> material_name = staad_obj.Property.GetPlateMaterialName(plate_ids[0])
         """
-        return self._property.GetPlateMaterialName(plate_id)
+        material_name = str(self._property.GetPlateMaterialName(plate_id))
+        if not material_name:
+            raise OsErrorBase(
+                "Unable to get plate material name.",
+                -1,
+            )
+        return material_name
 
     def DeleteMaterial(self, material_name: str):
         """
-        Delete a material.
+        Deletes a material from material list.
 
         Parameters
         ----------
@@ -1011,7 +1090,7 @@ class OSProperty:
         Returns
         -------
         bool:
-            'True' if succeeds 'else' False
+            'true' if it successfully deletes the material.
 
         Examples
         --------
@@ -1019,16 +1098,24 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.DeleteMaterial("Q235")
         """
-        return self._property.DeleteMaterial(material_name)
+        result = self._property.DeleteMaterial(material_name)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return bool(result)
 
     def SetMaterialName(self, material_name: str):
         """
-        Set the material name for a member.
+        Sets the default material used by subsequent section-property creation
+        calls (e.g. CreateBeamPropertyFromTable and its variants) — it does NOT
+        assign a material to an already-selected/existing beam, plate, or solid.
+        Use AssignMaterialToMember/AssignMaterialToPlate/AssignMaterialToSolid to
+        assign a material to existing elements.
 
         Parameters
         ----------
         material_name : str
-            The material name to assign.
+            The material name to use as the default for the next section-property
+            creation call.
 
         Returns
         -------
@@ -1038,13 +1125,14 @@ class OSProperty:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.Property.SetMaterialName("UserDefineMaterial_1")
+        >>> staad_obj.Property.SetMaterialName("STEEL")
+        >>> result = staad_obj.Property.CreateBeamPropertyFromTable(10, "ISMB600")
         """
         self._property.SetMaterialName(material_name)
 
     def RemoveMaterialFromBeam(self, beam_id: int):
         """
-        Remove the material assignment from a beam.
+        Removes the material assignment from specified beam.
 
         Parameters
         ----------
@@ -1054,7 +1142,7 @@ class OSProperty:
         Returns
         -------
         bool
-            True if removes material
+            'true' if it successfully removes the material.
 
         Examples
         --------
@@ -1063,14 +1151,18 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMaterialFromBeam(beam_ids[0])
         """
-        retVal = self._property.RemoveMaterialFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        if isinstance(beam_id, int):
+            beam_id = [beam_id]
+        beam_ids_safe_list = make_safe_array_long_input(beam_id)
+        beam_ids_array_vt = make_variant_vt_ref(
+            beam_ids_safe_list, automation.VT_ARRAY | automation.VT_I4
+        )
+        result = self._property.RemoveMaterialFromBeam(beam_ids_array_vt)
+        return bool(result)
 
     def RemoveMaterialFromPlate(self, plate_ids: list | int):
         """
-        Remove the material assignment from a plate.
+        Removes the material assignment from specified plate.
 
         Parameters
         ----------
@@ -1079,9 +1171,8 @@ class OSProperty:
 
         Returns
         -------
-        Bool
-            'True' if removes material else
-            'False' if it fails
+        bool
+            'true' if it successfully removes the material.
 
         Examples
         --------
@@ -1096,7 +1187,10 @@ class OSProperty:
         plate_ids_array_vt = make_variant_vt_ref(
             plate_ids_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.RemoveMaterialFromPlate(plate_ids_array_vt)
+        result = self._property.RemoveMaterialFromPlate(plate_ids_array_vt)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return bool(result)
 
     def CreateChannelPropertyFromTable(
         self,
@@ -1111,7 +1205,7 @@ class OSProperty:
         Parameters
         ----------
         country_code : int
-            The value for the specified country
+            The value for the specified country. Refer to 'country_code' parameter in 'Property.CreateBeamPropertyFromTable' API.
         section_name : str
             Name of the section
         spec_type : int
@@ -1170,7 +1264,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns assigned section property ID if successful.
+            Assigned section property ID if successful.
 
         Examples
         --------
@@ -1202,7 +1296,7 @@ class OSProperty:
         Parameters
         ----------
         country_code : int
-            The value for the specified country
+            The value for the specified country. Refer to 'country_code' parameter in 'Property.CreateBeamPropertyFromTable' API.
         section_name : str
             Name of the section
         spec_type : int
@@ -1299,7 +1393,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns assigned section property ID if successful.
+            Assigned property ID of newly creaed tube property if successful.
 
         Examples
         --------
@@ -1330,7 +1424,7 @@ class OSProperty:
         Parameters
         ----------
         country_code : int
-            The value for the specified country
+            The value for the specified country. Refer to 'country_code' parameter in 'Property.CreateBeamPropertyFromTable' API.
         section_name : str
             Name of the section
         spec_type : int
@@ -1408,7 +1502,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns assigned section property ID if successful.
+            Assigned property ID of newly created pipe property if successful.
 
         Examples
         --------
@@ -1421,6 +1515,8 @@ class OSProperty:
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
         return retVal
 
     def CreatePrismaticRectangleProperty(
@@ -1439,7 +1535,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID else '0' if it gets library Error (Unable to create property).
+            The assigned property ID of newly created prismatic rectangle property if successful.
 
         Examples
         --------
@@ -1447,9 +1543,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreatePrismaticRectangleProperty(0.5, 0.25)
         """
-        return self._property.CreatePrismaticRectangleProperty(
+        result = self._property.CreatePrismaticRectangleProperty(
             depth_along_y_axis, depth_along_z_axis
         )
+        if result == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return result
 
     def CreatePrismaticCircleProperty(self, circle_diameter: float):
         """
@@ -1463,7 +1562,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID else '0' if it gets  Library Error: Unable to create property.
+            The assigned property ID of newly created prismatic circle property if successful.
 
         Examples
         --------
@@ -1471,7 +1570,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreatePrismaticCircleProperty(0.25)
         """
-        return self._property.CreatePrismaticCircleProperty(circle_diameter)
+        result = self._property.CreatePrismaticCircleProperty(circle_diameter)
+        if result == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return result
 
     def CreatePrismaticTeeProperty(
         self,
@@ -1497,7 +1599,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID else '0' if it gets library Error (Unable to create property).
+            The assigned property ID of newly created prismatic tee property if successful.
 
         Examples
         --------
@@ -1505,9 +1607,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreatePrismaticTeeProperty(0.5, 0.25, 0.4, 0.1)
         """
-        return self._property.CreatePrismaticTeeProperty(
+        result = self._property.CreatePrismaticTeeProperty(
             total_section_depth, flange_width, stem_depth, stem_width
         )
+        if result == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return result
 
     def CreatePrismaticTrapezoidalProperty(
         self,
@@ -1530,7 +1635,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID else '0' if it gets library Error (Unable to create property).
+            The assigned property ID of newly created prismatic trapezoidal property if successful.
 
         Examples
         --------
@@ -1538,9 +1643,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreatePrismaticTrapezoidalProperty(0.5, 0.25, 0.2)
         """
-        return self._property.CreatePrismaticTrapezoidalProperty(
+        result = self._property.CreatePrismaticTrapezoidalProperty(
             section_depth, top_fiber_section_width, bottom_fiber_section_width
         )
+        if result == 0:
+            raise OsErrorBase("Library Error: Unable to create property.", -1)
+        return result
 
     def CreatePrismaticGeneralProperty(self, property_value_list: list):
         """
@@ -1577,7 +1685,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -1625,7 +1733,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -1683,7 +1791,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -1728,7 +1836,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -1773,17 +1881,19 @@ class OSProperty:
         vt_beam_ids = make_variant_vt_ref(
             safe_beam_id_list, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignBetaAngle(vt_beam_ids, beta_angle)
+        result = self._property.AssignBetaAngle(vt_beam_ids, beta_angle)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def CreateMemberTrussSpec(self):
         """
         Create MEMBER TRUSS specification.
 
-
         Returns
         -------
         int
-            Returns the assigned specification number ID.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1803,7 +1913,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1823,7 +1933,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1843,7 +1953,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1863,7 +1973,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1892,7 +2002,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1914,7 +2024,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1934,7 +2044,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -1947,13 +2057,13 @@ class OSProperty:
             raise_os_error_if_error_code(retVal)
         return retVal
 
-    def AssignElementSpecToPlate(self, plate_ids: list, spec_no: int):
+    def AssignElementSpecToPlate(self, plate_ids: list | int, spec_no: int):
         """
-        Assign specifications to plate(s).
+        Assign specifications to plate.
 
         Parameters
         ----------
-        plate_ids : list
+        plate_ids : list or list of int
             The plate number ID(s) list
         spec_no : int
             The specification number ID.
@@ -1961,7 +2071,7 @@ class OSProperty:
         Returns
         -------
         bool
-            True if successful.
+            'true' if it successfully assigns specification to the plate(s).
 
         Examples
         --------
@@ -1979,7 +2089,10 @@ class OSProperty:
         vt_plate_ids = make_variant_vt_ref(
             safe_plate_ids, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignElementSpecToPlate(vt_plate_ids, spec_no)
+        result = self._property.AssignElementSpecToPlate(vt_plate_ids, spec_no)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def CreateMemberPartialReleaseSpec(
         self, location: int, dof_release: list, factor: list
@@ -1992,14 +2105,14 @@ class OSProperty:
         location : int
             The offset location at START (= 0) or END (= 1) of the member.
         dof_release : list
-            Degrees of freedom: No Release (= 0) or Release (= 1) for FX, FY, FZ.
+            List of release values ('0' for No Release or '1' for Release) for each of following Degrees of freedom: FX, FY, FZ (in same order).
         factor : list
             List of partial release factors arranged in respective DOFs.
 
         Returns
         -------
         int
-            Returns the specification id if successful.
+            The specification id if successful.
 
         Examples
         --------
@@ -2031,12 +2144,12 @@ class OSProperty:
         node_id : int
             The node number ID to be released.
         dof_release : list
-            Degrees of freedom: No Release (=0) or Release (=1) for FX, FY, FZ, MX, MY and MZ.
+            List of release values ('0' for No Release or '1' for Release) for each of following Degrees of freedom: FX, FY, FZ, MX, MY and MZ (in same order)..
 
         Returns
         -------
         int
-            Returns the specification id if successful.
+            The specification id if successful.
 
         Examples
         --------
@@ -2065,7 +2178,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the country CODE if successful.
+            The country CODE if successful.
 
         Examples
         --------
@@ -2074,7 +2187,12 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> country_code = staad_obj.Property.GetCountryTableNo(beam_ids[0])
         """
-        return self._property.GetCountryTableNo(beam_id)
+        retVal = self._property.GetCountryTableNo(beam_id)
+        if retVal == 0:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve country code of beam.", -1
+            )
+        return retVal
 
     def GetSectionTableNo(self, beam_id: int):
         """
@@ -2088,7 +2206,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the section table number if successful.
+            The section table number if successful.
 
         Examples
         --------
@@ -2097,7 +2215,12 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> output = staad_obj.Property.GetSectionTableNo(beam_ids[0])
         """
-        return self._property.GetSectionTableNo(beam_id)
+        retVal = self._property.GetSectionTableNo(beam_id)
+        if retVal == 0:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve section table number of beam.", -1
+            )
+        return retVal
 
     def GetBeamSectionName(self, beam_id: int):
         """
@@ -2111,7 +2234,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the section string name. Refer to the table below for probable section names :
+            The section string name. Refer to the table below for probable section names :
                 +-----------+------------------------------------------+----------------------------------+--------------------------------+
                 | Sl No.    | Section Type                             | In STD File                      | GetBeamSectionName             |
                 +===========+==========================================+==================================+================================+
@@ -2139,7 +2262,12 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> output = staad_obj.Property.GetBeamSectionName(beam_ids[0])
         """
-        return self._property.GetBeamSectionName(beam_id)
+        retVal = self._property.GetBeamSectionName(beam_id)
+        if not retVal:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve section name of beam.", -1
+            )
+        return retVal
 
     def GetBeamSectionPropertyTypeNo(self, beam_id: int):
         """
@@ -2153,7 +2281,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the section property type number if successful else returns '0' if error. Section Type corresponding to property type number is shown in following table:
+            The section property type number if successful. Section Type corresponding to property type number is shown in following table:
                 +----------------------------+------------------------+
                 | Section Type               | Property Type Number   |
                 +============================+========================+
@@ -2260,7 +2388,12 @@ class OSProperty:
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
         >>> output = staad_obj.Property.GetBeamSectionPropertyTypeNo(beam_ids[0])
         """
-        return self._property.GetBeamSectionPropertyTypeNo(beam_id)
+        retVal = self._property.GetBeamSectionPropertyTypeNo(beam_id)
+        if retVal == 0:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve section table number of beam.", -1
+            )
+        return retVal
 
     def GetBeamConstants(self, beam_id: int):
         """
@@ -2274,7 +2407,7 @@ class OSProperty:
         Returns
         -------
         Tuple
-            Returns a tuple of Beam Constants found in following order Elasticity (Modulus of elasticity), Poisson (Poisson's ratio), Density (Weight density), Alpha (Coefficient of thermal expansion) and Damp (Damping ratio) respectively
+            A tuple of Beam Constants found in following order Elasticity (Modulus of elasticity), Poisson (Poisson's ratio), Density (Weight density), Alpha (Coefficient of thermal expansion) and Damp (Damping ratio) respectively
 
         Examples
         --------
@@ -2317,7 +2450,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns Beta angle.
+            Beta angle.
 
         Examples
         --------
@@ -2333,12 +2466,12 @@ class OSProperty:
 
     def GetSectionPropertyCount(self):
         """
-        Returns total number of different sectional properties exist in the current STAAD file.
+        Gets total number of different sectional properties exist in the current STAAD file.
 
         Returns
         -------
         int
-            Returns total number of different sectional properties.
+            Total number of different sectional properties.
 
         Examples
         --------
@@ -2360,7 +2493,7 @@ class OSProperty:
         Returns
         -------
         string
-            Returns a string for identification title of material.
+            A string for identification title of material.
 
         Examples
         --------
@@ -2380,7 +2513,7 @@ class OSProperty:
 
     def GetSectionPropertyType(self, sec_ref_no: int):
         """
-        Returns the section property type for the specified section property reference number.
+        The section property type for the specified section property reference number.
 
         Parameters
         ----------
@@ -2390,7 +2523,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns number referring to section type code table.
+            Number referring to section type code table.
 
         Examples
         --------
@@ -2402,11 +2535,16 @@ class OSProperty:
         result = self._property.GetSectionPropertyType(sec_ref_no)
         if result < 0:
             raise_os_error_if_error_code(result)
+        elif result == 0:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve section property type of section property.",
+                -1,
+            )
         return result
 
     def GetSectionPropertyCountry(self, sec_ref_no: int):
         """
-        Returns the country reference number for the section property reference number specified.
+        Gets the country reference number for the section property reference number specified.
 
         Parameters
         ----------
@@ -2416,7 +2554,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the country code.
+            The country code.
 
         Examples
         --------
@@ -2425,7 +2563,40 @@ class OSProperty:
         >>> nAssignedSectionPropID = staad_obj.Property.CreateBeamPropertyFromTable(1, "W14X873", 0, 0.0, 0.0);
         >>> output = staad_obj.Property.GetSectionPropertyCountry(nAssignedSectionPropID)
         """
-        return self._property.GetSectionPropertyCountry(sec_ref_no)
+        result = self._property.GetSectionPropertyCountry(sec_ref_no)
+        if result == 0:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve section property country of section property.",
+                -1,
+            )
+        return result
+
+    def GetMaterialPropertyCount(self):
+        """
+        Gets the material property count, over the FULL material list (all types: isotropic, 2D/3D
+        orthotropic), including the default materials (Concrete, Aluminum, Steel). This is the index space
+        used by GetIsotropicMaterialProperties, GetIsotropicMaterialPropertiesAssigned,
+        GetOrthotropic2DMaterialProperties and GetOrthotropic3DMaterialProperties -- NOT bounded by
+        GetIsotropicMaterialCount(), GetOrthotropic2DMaterialCount() or GetOrthotropic3DMaterialCount(),
+        each of which only counts materials of that one type.
+
+        Returns
+        -------
+        int
+            The material property count.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> material_count = staad_obj.Property.GetMaterialPropertyCount()
+        >>> for material_number in range(material_count):
+        >>>     try:
+        >>>         material, elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetIsotropicMaterialProperties(material_number)
+        >>>     except OsErrorBase:
+        >>>         continue  # material_number is not an isotropic material
+        """
+        return self._property.GetMaterialPropertyCount()
 
     def GetIsotropicMaterialCount(self):
         """
@@ -2434,7 +2605,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the number of isotropic materials.
+            The number of isotropic materials.
 
         Examples
         --------
@@ -2451,20 +2622,20 @@ class OSProperty:
         Parameters
         ----------
         material_number : int
-            Zero based index of the material
+            Zero based index of the material in the FULL material list (all types) - use
+            GetMaterialPropertyCount() to get the loop bound, NOT GetIsotropicMaterialCount()
+            (which only counts isotropic materials).
 
         Returns
         -------
         tuple : Tuple <str, float, float, float, float, float, float>
-            Returns a tuple consisting of Material Name, Modulus of elasticity, Poisson's ratio, Shear modulus, Weight density, Coefficient of thermal expansion and Damping ratio, respectively.
+            A tuple consisting of Material Name, Modulus of elasticity, Poisson's ratio, Shear modulus, Weight density, Coefficient of thermal expansion and Damping ratio, respectively.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> isotropic_mat_no = staad_obj.Property.GetIsotropicMaterialCount()
-        >>> if isotropic_mat_no > 0:
-        >>>     material, elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetIsotropicMaterialProperties(1)
+        >>> material, elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetIsotropicMaterialProperties(0)
         """
         safe_varE = make_safe_array_double(1)
         vt_varE = make_variant_vt_ref(safe_varE, automation.VT_R8)
@@ -2487,10 +2658,13 @@ class OSProperty:
             vt_varAlpha,
             vt_varCrDamp,
         )
-        if result == "":
-            raise_os_error_if_error_code(-6023)
+        if not result:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve properties for the specified isotropic material.",
+                -6023,
+            )
         return (
-            result,
+            str(result),
             vt_varE[0],
             vt_varPoisson[0],
             vt_varG[0],
@@ -2506,7 +2680,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the number of 2D orthotropic material.
+            The number of 2D orthotropic material.
 
         Examples
         --------
@@ -2523,33 +2697,41 @@ class OSProperty:
         Parameters
         ----------
         material_no : int
-            Material Number ID
+            Zero based index of the material in the FULL material list (all types) - use
+            GetMaterialPropertyCount() to get the loop bound, NOT GetOrthotropic2DMaterialCount()
+            (which only counts 2D orthotropic materials).
 
         Returns
         -------
-        tuple: Tuple(float, float, float, float, float, float)
-            Returns a tuple consisting of Modulus of elasticity, Poisson's ratio, Shear modulus, Weight density, Coefficient of thermal expansion and Damping ratio, respectively.
+        tuple : Tuple(list, list, list, list, list, list)
+            A tuple consisting of List of Modulus of elasticities, List of Poisson's ratios, List of Shear moduli, List of Weight densities, List of Coefficients of thermal expansion and List of Damping ratios, respectively.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> ortho_2d_mat_count = staad_obj.Property.GetOrthotropic2DMaterialCount()
-        >>> if ortho_2d_mat_count > 0:
-        >>>     elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetOrthotropic2DMaterialProperties(1)
+        >>> elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetOrthotropic2DMaterialProperties(0)
         """
-        safe_varE = make_safe_array_double(1)
-        vt_varE = make_variant_vt_ref(safe_varE, automation.VT_R8)
-        safe_varPoisson = make_safe_array_double(1)
-        vt_varPoisson = make_variant_vt_ref(safe_varPoisson, automation.VT_R8)
-        safe_varG = make_safe_array_double(1)
-        vt_varG = make_variant_vt_ref(safe_varG, automation.VT_R8)
-        safe_varDensity = make_safe_array_double(1)
-        vt_varDensity = make_variant_vt_ref(safe_varDensity, automation.VT_R8)
-        safe_varAlpha = make_safe_array_double(1)
-        vt_varAlpha = make_variant_vt_ref(safe_varAlpha, automation.VT_R8)
-        safe_varCrDamp = make_safe_array_double(1)
-        vt_varCrDamp = make_variant_vt_ref(safe_varCrDamp, automation.VT_R8)
+        safe_varE = make_safe_array_double(2)
+        vt_varE = make_variant_vt_ref(safe_varE, automation.VT_ARRAY | automation.VT_R8)
+        safe_varPoisson = make_safe_array_double(2)
+        vt_varPoisson = make_variant_vt_ref(
+            safe_varPoisson, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_varG = make_safe_array_double(3)
+        vt_varG = make_variant_vt_ref(safe_varG, automation.VT_ARRAY | automation.VT_R8)
+        safe_varDensity = make_safe_array_double(2)
+        vt_varDensity = make_variant_vt_ref(
+            safe_varDensity, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_varAlpha = make_safe_array_double(2)
+        vt_varAlpha = make_variant_vt_ref(
+            safe_varAlpha, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_varCrDamp = make_safe_array_double(2)
+        vt_varCrDamp = make_variant_vt_ref(
+            safe_varCrDamp, automation.VT_ARRAY | automation.VT_R8
+        )
         result = self._property.GetOrthotropic2DMaterialProperties(
             material_no,
             vt_varE,
@@ -2559,15 +2741,18 @@ class OSProperty:
             vt_varAlpha,
             vt_varCrDamp,
         )
-        if result == "":
-            raise_os_error_if_error_code(-6023)
+        if not result:
+            raise OsErrorBase(
+                "Library Error: Unable to retrieve properties for the specified 2D orthotropic material.",
+                -6023,
+            )
         return (
-            vt_varE[0],
-            vt_varPoisson[0],
-            vt_varG[0],
-            vt_varDensity[0],
-            vt_varAlpha[0],
-            vt_varCrDamp[0],
+            list(vt_varE[0]),
+            list(vt_varPoisson[0]),
+            list(vt_varG[0]),
+            list(vt_varDensity[0]),
+            list(vt_varAlpha[0]),
+            list(vt_varCrDamp[0]),
         )
 
     def GetOrthotropic3DMaterialCount(self):
@@ -2577,7 +2762,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the orthotropic 3D material count.
+            The orthotropic 3D material count.
 
         Examples
         --------
@@ -2594,33 +2779,41 @@ class OSProperty:
         Parameters
         ----------
         material_no : int
-            Material Number ID
+            Zero based index of the material in the FULL material list (all types) - use
+            GetMaterialPropertyCount() to get the loop bound, NOT GetOrthotropic3DMaterialCount()
+            (which only counts 3D orthotropic materials).
 
         Returns
         -------
-        tuple : Tuple(float, float, float, float, float, float)
-            Returns a tuple consisting of Modulus of elasticity, Poisson's ratio, Shear modulus, Weight density, Coefficient of thermal expansion and Damping ratio respectively.
+        tuple : Tuple(list, list, list, list, list, list)
+            A tuple consisting of List of Modulus of elasticities, List of Poisson's ratios, List of Shear moduli, List of Weight densities, List of Coefficients of thermal expansion and List of Damping ratios respectively.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> ortho_3d_mat_count = staad_obj.Property.GetOrthotropic3DMaterialCount()
-        >>> if ortho_3d_mat_count > 0:
-        >>>     elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetOrthotropic3DMaterialProperties(1)
+        >>> elasticity, poisson, shear_mod, density, coef_thermal_exp, damp_ratio = staad_obj.Property.GetOrthotropic3DMaterialProperties(0)
         """
-        safe_varE = make_safe_array_double(1)
-        vt_varE = make_variant_vt_ref(safe_varE, automation.VT_R8)
-        safe_varPoisson = make_safe_array_double(1)
-        vt_varPoisson = make_variant_vt_ref(safe_varPoisson, automation.VT_R8)
-        safe_varG = make_safe_array_double(1)
-        vt_varG = make_variant_vt_ref(safe_varG, automation.VT_R8)
-        safe_varDensity = make_safe_array_double(1)
-        vt_varDensity = make_variant_vt_ref(safe_varDensity, automation.VT_R8)
-        safe_varAlpha = make_safe_array_double(1)
-        vt_varAlpha = make_variant_vt_ref(safe_varAlpha, automation.VT_R8)
-        safe_varCrDamp = make_safe_array_double(1)
-        vt_varCrDamp = make_variant_vt_ref(safe_varCrDamp, automation.VT_R8)
+        safe_varE = make_safe_array_double(3)
+        vt_varE = make_variant_vt_ref(safe_varE, automation.VT_ARRAY | automation.VT_R8)
+        safe_varPoisson = make_safe_array_double(3)
+        vt_varPoisson = make_variant_vt_ref(
+            safe_varPoisson, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_varG = make_safe_array_double(3)
+        vt_varG = make_variant_vt_ref(safe_varG, automation.VT_ARRAY | automation.VT_R8)
+        safe_varDensity = make_safe_array_double(3)
+        vt_varDensity = make_variant_vt_ref(
+            safe_varDensity, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_varAlpha = make_safe_array_double(3)
+        vt_varAlpha = make_variant_vt_ref(
+            safe_varAlpha, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_varCrDamp = make_safe_array_double(3)
+        vt_varCrDamp = make_variant_vt_ref(
+            safe_varCrDamp, automation.VT_ARRAY | automation.VT_R8
+        )
         result = self._property.GetOrthotropic3DMaterialProperties(
             material_no,
             vt_varE,
@@ -2650,12 +2843,12 @@ class OSProperty:
         beam_id : int
             The beam number ID
         member_offset_position : int
-            Member Start position (= 0); member End position (= 1).
+            Offset Position of Member: '0' for Start position and '1' for End position.
 
         Returns
         -------
         tuple : Tuple(float, float, float)
-            Returns a tuple consisting of member End position (= 1), the offset x in coordinate (local) and the offset y in coordinate (local) respectively.
+            Tuple consisting of X, Y, and Z global coordinates of the offset.
 
         Examples
         --------
@@ -2677,8 +2870,8 @@ class OSProperty:
             vt_varfyOffSet,
             vt_varfzOffSet,
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise_os_error_if_error_code(-1)
         return vt_varfxOffSet[0], vt_varfyOffSet[0], vt_varfzOffSet[0]
 
     def GetMemberLocalOffSet(self, beam_id: int, member_offset_position: int):
@@ -2690,12 +2883,12 @@ class OSProperty:
         beam_id : int
             The beam number ID
         member_offset_position : int
-            Member Start position (= 0); member End position (= 1).
+           Offset Position of Member: '0' for Start position and '1' for End position.
 
         Returns
         -------
-        List
-            Returns a List consisting of member End position (= 1), the offset x in coordinate (local) and the offset y in coordinate (local) respectively.
+        tuple : Tuple(float, float, float)
+            Tuple consisting X, Y, and Z local coordinates of the offset.
 
         Examples
         --------
@@ -2717,8 +2910,8 @@ class OSProperty:
             vt_varfyOffSet,
             vt_varfzOffSet,
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise_os_error_if_error_code(-1)
         return vt_varfxOffSet[0], vt_varfyOffSet[0], vt_varfzOffSet[0]
 
     def GetIsotropicMaterialPropertiesAssigned(self, material_no: int):
@@ -2728,20 +2921,20 @@ class OSProperty:
         Parameters
         ----------
         material_no : int
-            Material number ID
+            Zero based index of the material in the FULL material list (all types) - use
+            GetMaterialPropertyCount() to get the loop bound, NOT GetIsotropicMaterialCount()
+            (which only counts isotropic materials).
 
         Returns
         -------
-        tuple : Tuple <str, float, float, float, float, float, float, int>
-            Returns a Tuple consisting of material name, modulus of elasticity, poisson's ratio, shear modulus, weight density, coefficient of thermal expansion, damping ratio and material assigned to elements or not: unassigned(= 1), assigned(= 2) respectively.
+        tuple : Tuple <str, float, float, float, float, float, float, bool>
+            A Tuple consisting of material name, modulus of elasticity, poisson's ratio, shear modulus, weight density, coefficient of thermal expansion, damping ratio and a boolean if material assigned (true) to elements or not (false) respectively.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> isotropic_mat_no = staad_obj.Property.GetIsotropicMaterialCount()
-        >>> if isotropic_mat_no > 0:
-        >>>     elasticity, poisson, shear_modulus, weight_density, thermal_expansion, damping_ratio, is_assigned = staad_obj.Property.GetIsotropicMaterialPropertiesAssigned(1)
+        >>> material_name, elasticity, poisson, shear_modulus, weight_density, thermal_expansion, damping_ratio, is_assigned = staad_obj.Property.GetIsotropicMaterialPropertiesAssigned(0)
         """
         safe_varE = make_safe_array_double(1)
         vt_varE = make_variant_vt_ref(safe_varE, automation.VT_R8)
@@ -2767,8 +2960,11 @@ class OSProperty:
             vt_varCrDamp,
             vt_varAssigned,
         )
-        if material_name == "":
-            raise_os_error_if_error_code(-6023)
+        if not material_name:
+            raise OsErrorBase(
+                "Library Error: Unable to isotropic material properties for the specified material.",
+                -6023,
+            )
         return (
             material_name,
             vt_varE[0],
@@ -2777,7 +2973,7 @@ class OSProperty:
             vt_varDensity[0],
             vt_varAlpha[0],
             vt_varCrDamp[0],
-            vt_varAssigned[0],
+            bool(vt_varAssigned[0]),
         )
 
     def AddControlDependentRelation(
@@ -2793,7 +2989,7 @@ class OSProperty:
         dependent_node_list: list,
     ):
         """
-        Add a control/dependent joint specification to specified node(s).
+        Adds a control/dependent joint specification to specified node(s).
 
         Parameters
         ----------
@@ -2834,9 +3030,7 @@ class OSProperty:
         result = self._property.AddControlDependentRelation(
             control_node, rigid_type, fx, fy, fz, mx, my, mz, vt_dependant_node_list
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
-        return result == 0
+        return bool(result)
 
     def CreateIsotropicMaterialProperties(
         self,
@@ -2849,30 +3043,30 @@ class OSProperty:
         damp_ratio: float,
     ):
         """
-        Creates isotropic material properties.
+        Creates isotropic material with specified properties. Updates material properties incase a material with same name exists.
 
         Parameters
         ----------
         material_name : str
             Material Name
         elasticity_mod : float
-            Modulus of elasticity List (of size 3).
+            Modulus of elasticity.
         poisson : float
-            Poisson's ratio List (of size 3).
+            Poisson's ratio.
         shear_mod : float
-            Shear modulus List (of size 3).
+            Shear modulus.
         density : float
-            Weight density List (of size 3).
+            Weight density.
         coef_thermal_exp : float
-            Coefficient of thermal expansion List (of size 3).
+            Coefficient of thermal expansion.
         damp_ratio : float
-            Damping ratio List (of size 3).
+            Damping ratio.
 
         Returns
         -------
         int
-            Returns 1 if Material is updated as a material with that name was already present.
-            Returns 0 if Material is created.
+            '1' if Material is successfully updated.
+            '0' if Material is successfully created.
 
         Examples
         --------
@@ -2880,7 +3074,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateIsotropicMaterialProperties("MATERIAL1", 262040, 0.2, 0.06, 0.04, 0.000002, 0.06)
         """
-        return self._property.CreateIsotropicMaterialProperties(
+        result = self._property.CreateIsotropicMaterialProperties(
             material_name,
             elasticity_mod,
             poisson,
@@ -2889,6 +3083,9 @@ class OSProperty:
             coef_thermal_exp,
             damp_ratio,
         )
+        if result < 0:
+            raise OsErrorBase("Unable to create or update isotropic material.", -1)
+        return result
 
     def CreateUPTTable(self, table_type: int):
         """
@@ -2925,7 +3122,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns User Provided Table (UPT) number id.
+            User Provided Table (UPT) number id.
 
         Examples
         --------
@@ -2933,7 +3130,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreateUPTTable(1)
         """
-        return self._property.CreateUPTTable(table_type)
+        result = self._property.CreateUPTTable(table_type)
+        if result == 0:
+            raise OsErrorBase("Unable to create User Provided Table.", -1)
+        return result
 
     def RemoveUPTTable(self, table_ref_id: int):
         """
@@ -2947,7 +3147,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 'True' if successful.
+            'true' if successful.
 
         Examples
         --------
@@ -2955,7 +3155,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.RemoveUPTTable(1)
         """
-        return self._property.RemoveUPTTable(table_ref_id)
+        result = self._property.RemoveUPTTable(table_ref_id)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def AddUPTPropertyWIDEFLANGE(
         self,
@@ -3028,9 +3231,7 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyCHANNEL(
         self,
@@ -3090,7 +3291,7 @@ class OSProperty:
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(2)
-        >>> result = staad_obj.Property.AddUPTPropertyCHANNEL(upt_num_id, "VJG20-2", 1.1, 2.0, 1.5, 3.5, 7.2, 4.5, 6.9, 8.2, 1.3, 9.2)
+        >>> result = staad_obj.Property.AddUPTPropertyCHANNEL(upt_num_id, "VJG20-2", 1.1, 2.0, 1.5, 3.5, 7.2, 4.5, 6.9, 8.2, 1.3, 9.2, 5.9)
         """
         retVal = self._property.AddUPTPropertyCHANNEL(
             table_reference_id,
@@ -3107,9 +3308,7 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyANGLE(
         self,
@@ -3166,9 +3365,7 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyDOUBLEANGLE(
         self,
@@ -3241,9 +3438,7 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyTEE(
         self,
@@ -3321,9 +3516,7 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyPIPE(
         self,
@@ -3354,10 +3547,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Return 0 if ok.\n
-            Return -6032 if the section with section_name cannot be added to the UPT table using table_reference_id.\n
-            Return -6045 if a section with the same section_name already exists in the UPT table for the given table_reference_id.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -3366,7 +3557,7 @@ class OSProperty:
         >>> upt_num_id = staad_obj.Property.CreateUPTTable(6)
         >>> result = staad_obj.Property.AddUPTPropertyPIPE(upt_num_id, "VJG20-2", 1.2, 2.2, 4.5, 6.5)
         """
-        return self._property.AddUPTPropertyPIPE(
+        retVal = self._property.AddUPTPropertyPIPE(
             table_reference_id,
             section_name,
             out_diameter,
@@ -3374,6 +3565,9 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return bool(retVal)
 
     def AddUPTPropertyTUBE(
         self,
@@ -3442,9 +3636,7 @@ class OSProperty:
             shear_area_y,
             shear_area_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyGENERAL(
         self,
@@ -3542,9 +3734,7 @@ class OSProperty:
             warping_constant,
             depth_of_web,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyISECTION(
         self,
@@ -3617,9 +3807,7 @@ class OSProperty:
             shear_area_z,
             torsional_constant,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def AddUPTPropertyPRISMATIC(
         self,
@@ -3684,9 +3872,7 @@ class OSProperty:
             depth_y,
             depth_z,
         )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def RemovePropertyFromUPTTable(self, table_reference_id: int, section_name: str):
         """
@@ -3702,18 +3888,19 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 1 if successful.
+            1 if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> upt_num_id = staad_obj.Property.CreateUPTTable(7)
-        >>> result = staad_obj.Property.RemovePropertyFromUPTTable(upt_num_id, "VJG20")
+        >>> result = staad_obj.Property.RemovePropertyFromUPTTable(7, "VJG20")
         """
         retVal = self._property.RemovePropertyFromUPTTable(
             table_reference_id, section_name
         )
+        if retVal == 0:
+            raise OsErrorBase("Unable to remove property for given UPT Table.", -1)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         return retVal
@@ -3770,8 +3957,9 @@ class OSProperty:
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> beamIdList = staad_obj.Geometry.GetBeamList()
-        >>> result = staad_obj.Property.AssignMemberAttribute("MEMBTYPE", "BRACE", beamIdList[0:2]) // Assign first two beams in the model
-        >>> result = staad_obj.Property.AssignMemberAttribute("MEMBTYPE", "BRACE", beamIdList[3]) // Assign third beam in model
+        >>> result = staad_obj.Property.CreateMemberAttribute("MEMBTYPE", "BRACE")
+        >>> result = staad_obj.Property.AssignMemberAttribute("MEMBTYPE", "BRACE", beamIdList[0:2]) # Assign first two beams in the model
+        >>> result = staad_obj.Property.AssignMemberAttribute("MEMBTYPE", "BRACE", beamIdList[3]) # Assign third beam in model
         """
         if isinstance(member_list, int):
             member_list = [member_list]
@@ -3827,7 +4015,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the count of matching members.
+            The count of matching members.
 
         Examples
         --------
@@ -3854,7 +4042,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns a list for Member(s) number ID list.
+            A list for Member(s) number ID list.
 
         Examples
         --------
@@ -3872,164 +4060,9 @@ class OSProperty:
         result = self._property.GetMemberListByAttribute(
             attribute_name, str_Value, vt_varMemberList
         )
-        if result != 0:
+        if result < 0:
             raise_os_error_if_error_code(-1)
-        return vt_varMemberList[0]
-
-    def CreateElementAttribute(self, attribute_name: str, str_value: str):
-        """
-        Create element attribute by name.
-
-        Parameters
-        ----------
-        attribute_name : str
-            Name of the attribute.
-        str_value : str
-            A string value
-
-        Returns
-        -------
-        bool
-            True if successful.
-
-        Examples
-        --------
-        >>> from openstaadpy import os_analytical
-        >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.CreateElementAttribute("MEMBTYPE", "BRACE")
-        """
-        retVal = self._property.CreateElementAttribute(attribute_name, str_value)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
-
-    def AssignElementAttribute(
-        self, attribute_name: str, str_Value: str, element_list: list | int
-    ):
-        """
-        Assign element(s) to an attribute.
-
-        Parameters
-        ----------
-        attribute_name : str
-            Name of the attribute.
-        str_Value : str
-            A string value
-        element_list : list of int or int
-            Element(s) number ID list.
-
-        Returns
-        -------
-        bool
-            True if successful.
-
-        Examples
-        --------
-        >>> from openstaadpy import os_analytical
-        >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.AssignElementAttribute("MEMBTYPE", "BRACE", [5, 7, 3]) # Assign attribute to multiple elements
-        >>> result = staad_obj.Property.AssignElementAttribute("MEMBTYPE", "BRACE", 6) # Assign attribute to single element
-        """
-        if isinstance(element_list, int):
-            element_list = [element_list]
-        safe_element_list = make_safe_array_long_input(element_list)
-        vt_element_list = make_variant_vt_ref(
-            safe_element_list, automation.VT_ARRAY | automation.VT_I4
-        )
-        retVal = self._property.AssignElementAttribute(
-            attribute_name, str_Value, vt_element_list
-        )
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
-
-    def DeleteElementAttribute(self, attribute_name: str, str_value: str):
-        """
-        Delete the element attribute by name.
-
-        Parameters
-        ----------
-        attribute_name : str
-            Name of the attribute.
-        str_value : str
-            A string value
-
-        Returns
-        -------
-        bool
-            True if successful.
-
-        Examples
-        --------
-        >>> from openstaadpy import os_analytical
-        >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.DeleteElementAttribute("MEMBTYPE", "BRACE")
-        """
-        retVal = self._property.DeleteElementAttribute(attribute_name, str_value)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
-
-    def GetElementCountByAttribute(self, attribute_name: str, str_value: str):
-        """
-        Returns the number of element(s) in specified attribute.
-
-        Parameters
-        ----------
-        attribute_name : str
-            Name of the attribute.
-        str_value : str
-            A string value
-
-        Returns
-        -------
-        int
-            Returns number of elements in specified attribute.
-
-        Examples
-        --------
-        >>> from openstaadpy import os_analytical
-        >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.GetElementCountByAttribute("MEMBTYPE", "BRACE")
-        """
-        retVal = self._property.GetElementCountByAttribute(attribute_name, str_value)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal
-
-    def GetElementListByAttribute(self, attribute_name: str, str_value: str):
-        """
-        Get element list by attribute.
-
-        Parameters
-        ----------
-        attribute_name : str
-            Name of the attribute.
-        str_value : str
-            A string value
-
-        Returns
-        -------
-        List of int
-            Returns an elements number ID list.
-
-        Examples
-        --------
-        >>> from openstaadpy import os_analytical
-        >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.GetElementListByAttribute("MEMBTYPE", "BRACE")
-        """
-        elementListCount = self._property.GetElementCountByAttribute(
-            attribute_name, str_value
-        )
-        safe_elementList = make_safe_array_long(elementListCount)
-        vt_elementList = make_variant_vt_ref(safe_elementList, automation.VT_I4)
-        result = self._property.GetElementListByAttribute(
-            attribute_name, str_value, vt_elementList
-        )
-        if result != 0:
-            raise_os_error_if_error_code(-1)
-        return vt_elementList[0]
+        return list(vt_varMemberList[0])
 
     def GetAssignedAttributeCount(self, member_id: int):
         """
@@ -4043,7 +4076,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the number of attributes associated with beam (if member with this ID exists) or plate (if member does not exist) having the specified member ID (member_id).
+            The number of attributes associated with beam (if member with this ID exists) or plate (if member does not exist) having the specified member ID (member_id).
 
         Examples
         --------
@@ -4052,7 +4085,10 @@ class OSProperty:
         >>> plateIds = staad_obj.Geometry.GetPlateList()
         >>> result = staad_obj.Property.GetAssignedAttributeCount(plateIds[0])
         """
-        return self._property.GetAssignedAttributeCount(member_id)
+        result = self._property.GetAssignedAttributeCount(member_id)
+        if result < 0:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def GetAssignedAttributeByIndex(self, attribute_index: int):
         """
@@ -4065,8 +4101,8 @@ class OSProperty:
 
         Returns
         -------
-        tuple : tuple<string, string>L
-            Returns a tuple consisting of attribute name and a string value, respectively.
+        tuple : tuple<string, string>
+            A tuple consisting of attribute name and a string value, respectively.
 
         Examples
         --------
@@ -4141,7 +4177,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns value referring to type of member specification as per table below:
+            Value referring to type of member specification as per table below:
                 +-------+------------------------------+
                 | Value | Type of Member Specification |
                 +=======+==============================+
@@ -4168,7 +4204,7 @@ class OSProperty:
         safe_SpecCode = make_safe_array_long(1)
         vt_SpecCode = make_variant_vt_ref(safe_SpecCode, automation.VT_I4)
         self._property.GetMemberSpecCode(member_id, vt_SpecCode)
-        return vt_SpecCode[0]
+        return int(vt_SpecCode[0])
 
     def GetPublishedProfileName(self, staad_profile_name: str, country_code: int):
         """
@@ -4184,8 +4220,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns published profile name if successful.\n
-            Returns NULL or empty string if unable to find any equivalent published name corresponding to STAAD profile name staad_profile_name.
+            Published profile name if successful.
 
         Examples
         --------
@@ -4193,7 +4228,15 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetPublishedProfileName("STAADProfile1", 1)
         """
-        return self._property.GetPublishedProfileName(staad_profile_name, country_code)
+        result = self._property.GetPublishedProfileName(
+            staad_profile_name, country_code
+        )
+        if not result:
+            raise OsErrorBase(
+                "Unable to find any equivalent published name corresponding to STAAD profile name.",
+                -1,
+            )
+        return result
 
     def GetSTAADProfileName(self, published_name: str, country_code: int):
         """
@@ -4209,8 +4252,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns STAAD profile name if successful.\n
-            Returns NULL if Unable to find any equivalent STAAD name corresponding to profile name (published_name).
+            STAAD profile name if successful.
 
         Examples
         --------
@@ -4218,35 +4260,27 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetSTAADProfileName("PublishedProfile1", 1)
         """
-        return self._property.GetSTAADProfileName(published_name, country_code)
+        result = self._property.GetSTAADProfileName(published_name, country_code)
+        if not result:
+            raise OsErrorBase(
+                "Unable to find any equivalent published name corresponding to STAAD profile name.",
+                -1,
+            )
+        return result
 
-    def GetSectionPropertyValues(self, prof_type: int):
+    def GetSectionPropertyValues(self, section_property_id: int):
         """
-        Retrieve long member properties of the specified beam member.
+        Retrieve section property Values of the specified section property.
 
         Parameters
         ----------
-        prof_type : int
-            Assign Profile Type:
-                +-------------------+-------+
-                | Prof Type         | Value |
-                +===================+=======+
-                | AssignAngle       | 0     |
-                +-------------------+-------+
-                | AssignDoubleAngle | 1     |
-                +-------------------+-------+
-                | AssignBeam        | 2     |
-                +-------------------+-------+
-                | AssignColumn      | 3     |
-                +-------------------+-------+
-                | AssignChannel     | 4     |
-                +-------------------+-------+
-
+        section_property_id : int
+            Section Property ID.
 
         Returns
         -------
         tuple : Tuple (float, float, float, float, float, float, float, float, float, float)
-            Returns a Tuple consisting of Width of the section (WID), Depth of the section (DEP), Cross section area (Ax), Shear area in local y-axis (If zero, shear deformation is ignored in the analysis (Ay)), Shear area in local z-axis (If zero, shear deformation is ignored in the analysis (Az)), Moment of inertia about local z-axis (Ix), Moment of inertia about local y-axis (Iy), Torsional constant (Iz) and Thickness of top flange (Tf) and Thickness of web (Tw) respectively.
+            A Tuple consisting of Width of the section (WID), Depth of the section (DEP), Cross section area (Ax), Shear area in local y-axis (If zero, shear deformation is ignored in the analysis (Ay)), Shear area in local z-axis (If zero, shear deformation is ignored in the analysis (Az)), Moment of inertia about local z-axis (Ix), Moment of inertia about local y-axis (Iy), Torsional constant (Iz) and Thickness of top flange (Tf) and Thickness of web (Tw) respectively.
 
         Examples
         --------
@@ -4275,7 +4309,7 @@ class OSProperty:
         safe_varfTw = make_safe_array_double(1)
         vt_varfTw = make_variant_vt_ref(safe_varfTw, automation.VT_R8)
         result = self._property.GetSectionPropertyValues(
-            prof_type,
+            section_property_id,
             vt_varfWidth,
             vt_varfDepth,
             vt_varfAx,
@@ -4287,8 +4321,8 @@ class OSProperty:
             vt_varfTf,
             vt_varfTw,
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise_os_error_if_error_code(-1)
         return (
             vt_varfWidth[0],
             vt_varfDepth[0],
@@ -4304,7 +4338,7 @@ class OSProperty:
 
     def GetSectionPropertyValuesEx(self, section_property_id: int):
         """
-        Returns the section property Values of the specified beam.
+        Gets the section property Values of the specified section property.
 
         Parameters
         ----------
@@ -4314,14 +4348,112 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(int, list)
-            Returns a Tuple consisting of Number referring to below table, a float list for section property parameters respectively.
+            A Tuple consisting of property type (proptype) number referring to below table, a float list for section property parameters respectively:
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | Section Type               | Property Type | Property Parameters (Returned in same order in property parameter list)                                 |
+                +============================+===============+=========================================================================================================+
+                | BEAM ST                    | 610           | Ax D Bf Tf Tw Iz Iy Ix                                                                                  |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | BEAM D                     | 616           | D Bf Tf Tw Iz Iy Ix SP                                                                                  |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | BEAM TC                    | 613           | Ax D Bf Tf Tw Iz Iy Ix WP TH                                                                            |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | BEAM BC                    | 614           | Ax D Bf Tf Tw Iz Iy Ix WP TH                                                                            |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | BEAM TB                    | 615           | Ax D Bf Tf Tw Iz Iy Ix WP TH BW BT                                                                      |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | BEAM T                     | 611           | Ax D Bf Tf Tw Iz Iy Ix                                                                                  |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | BEAM CM                    | 612           | Ax D Bf Tf Tw Iz Iy Ix CT FC CW CD                                                                      |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | CHANNEL ST                 | 630           | Ax D Bf Tf Tw Iz Iy Ix                                                                                  |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | CHANNEL D                  | 631           | Ax D Bf Tf Tw Iz Iy Ix SP                                                                               |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | CHANNEL FR                 | 633           | Ax D Bf Tf Tw Iz Iy Ix FR                                                                               |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE ST                   | 640           | Ax D B T Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE LD                   | 642           | Ax D B T Iz Iy Ix LD                                                                                    |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE SD                   | 643           | Ax D B T Iz Iy Ix SD                                                                                    |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE RA                   | 641           | Ax D B T Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE SA                   | 646           | Ax D B T Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PIPE ST                    | 660           | Ax OD Tw Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | HSS RECTANGLE              | 654           | Ax D B T Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | HSS ROUND                  | 655           | Ax OD Tw Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | CASTEL ST                  | 656           | Ax D Bf Tf Tw Iz Iy Ix                                                                                  |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | TUBE ST                    | 650           | Ax D B T Iz Iy Ix                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | TEE ST                     | 620           | Ax D Bf Tf Tw Iz Iy Ix                                                                                  |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PLATE STRIP                | 666           | Ax D B Iz Iy Ix                                                                                         |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE COLD ST              | 644           | Ax D B T Iz Iy Ix R Ay Az                                                                               |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ANGLE COLD ST WITH LIPS    | 645           | Ax D B T Iz Iy Ix R LIP Ay Az                                                                           |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | CHANNEL COLD ST            | 634           | Ax D Bf T R Iz Iy Ix Ay Az                                                                              |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | CHANNEL COLD ST WITH LIPS  | 635           | Ax D Bf T R Iz Iy Ix LIP Ay Az                                                                          |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ZEES COLD ST               | 662           | Ax D B T R Iz Iy Ix Ay Az                                                                               |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | ZEES COLD ST WITH LIPS     | 663           | Ax D B T LIP LIP_Angle R Iz Iy Ix Ay Az                                                                 |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | HAT COLD ST                | 664           | Ax D B T BOT_F R Iz Iy Ix Ay Az                                                                         |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | TAPER                      | 680           | F1 F2 F3 F4 F5 F6 F7                                                                                    |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | TAPERED TUBE               | 675           | | Ax Iz Iy Ix D1 D2 TH SECTION_TYPE                                                                     |
+                | ^                          | ^             | | SECTION_TYPE(1 TO 6 for Round,Hexdecagonal,Dodecagonal,Octagonal,Hexagonal,Square respectively)       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PRISMATIC CIRCLE           | 671           | Ax Iz Iy Ix YD                                                                                          |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PRISMATIC RECT             | 672           | Ax Iz Iy Ix YD ZD                                                                                       |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PRISMATIC TRAP             | 674           | Ax Iz Iy Ix YD ZD ZB                                                                                    |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PRISMATIC TEE              | 673           | Ax Iz Iy Ix YD ZD YB ZB                                                                                 |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | PRISMATIC GENERAL          | 676           | Ax Ay Az Ix Iy Iz YD ZD YB ZB                                                                           |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | SOLID ROUND                | 668           | Ax OD Tw Iz Iy Ix Z                                                                                     |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT PRISMATIC              | 699           | Ax Iz Iy Ix Ay Az YD ZD                                                                                 |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT GENERAL                | 697           | Ax D Td B Tb Iz Iy Ix Sz Sy Ay Az Pz Py Hss Dee                                                         |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT WIDE FLANGE            | 690           | Ax D Tw Wf Tf Iz Iy Ix Ay Az Wf1 Tf1                                                                    |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT CHANNEL                | 691           | Ax D Tw Wf Tf Iz Iy Ix Cz Ay Az                                                                         |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT ANGLE                  | 692           | Ax D Wf Tf R Ay Az Iz Iy Ix                                                                             |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT DOUBLE ANGLE           | 693           | Ax D Wf Tf SP Iz Iy Ix Cy Ay Az                                                                         |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT TEE                    | 694           | Ax D Wf Tf Tw Iz Iy Ix Cy Ay Az                                                                         |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT PIPE                   | 695           | Ax OD ID Ay Az Iz Iy Ix                                                                                 |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT TUBE                   | 696           | Ax D Wf Tf Iz Iy Ix Ay Az                                                                               |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
+                | UPT ISECTION               | 698           | Dww Tww Dww1 Bff Tff Bff1 Tff1 Ayf Azf Xif                                                              |
+                +----------------------------+---------------+---------------------------------------------------------------------------------------------------------+
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> nAssignedSectionPropID = staad_obj.Property.CreateBeamPropertyFromTable(1, "W14X873", 0, 0.0, 0.0)
-        >>> result = staad_obj.Property.GetSectionPropertyValuesEx(nAssignedSectionPropID)
+        >>> property_type, property_parameter_values = staad_obj.Property.GetSectionPropertyValuesEx(nAssignedSectionPropID)
         """
         safe_propType = make_safe_array_long(1)
         vt_propType = make_variant_vt_ref(safe_propType, automation.VT_I4)
@@ -4350,8 +4482,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns True if Delete Member Release Specification Successful.
-            Returns False if Delete Member Release Specification failed
+            True if it succesfully deletes Member Release Specification.
 
         Examples
         --------
@@ -4360,11 +4491,14 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.DeleteMemberReleaseSpec(beamIds[0], 1)
         """
-        return self._property.DeleteMemberReleaseSpec(beam_id, release_location)
+        result = self._property.DeleteMemberReleaseSpec(beam_id, release_location)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def GetBeamSectionPropertyValuesEx(self, beam_id: int):
         """
-        Returns the section property Values of the specified beam.
+        Gets the beam section property Values of the specified beam.
 
         Parameters
         ----------
@@ -4374,7 +4508,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(int, list)
-            Returns a Tuple consisting of property type (proptype) number referring to below table, a float list for section property parameters respectively:
+            A Tuple consisting of property type (proptype) number referring to below table, a float list for section property parameters respectively:
                 +---------------------------+----------+----------------------------------------------------------------------------------------------------------------------------+
                 | Section Type              | propType | propValues                                                                                                                 |
                 +===========================+==========+============================================================================================================================+
@@ -4495,32 +4629,19 @@ class OSProperty:
             raise_os_error_if_error_code(-1)
         return vt_varPropType[0], list(vt_varProperties[0])
 
-    def GetSectionPropertyAssignedBeamCount(self, prof_type: int):
+    def GetSectionPropertyAssignedBeamCount(self, sectn_prop_id: int):
         """
-        Get section  assigned beam count.
+        Get total number of beams assigned with specified section property.
 
         Parameters
         ----------
-        prof_type : int
-            Assign Profile Type:
-                +---------------------+-------+
-                |      Prof Type      | Value |
-                +=====================+=======+
-                | AssignAngle         |   0   |
-                +---------------------+-------+
-                | AssignDoubleAngle   |   1   |
-                +---------------------+-------+
-                | AssignBeam          |   2   |
-                +---------------------+-------+
-                | AssignColumn        |   3   |
-                +---------------------+-------+
-                | AssignChannel       |   4   |
-                +---------------------+-------+
+        sectn_prop_id : int
+            Section Property ID
 
         Returns
         -------
         int
-            Returns the section table number if successful.
+            Total beam count assigned with specified section property.
 
         Examples
         --------
@@ -4528,37 +4649,24 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetSectionPropertyAssignedBeamCount(1)
         """
-        retVal = self._property.GetSectionPropertyAssignedBeamCount(prof_type)
+        retVal = self._property.GetSectionPropertyAssignedBeamCount(sectn_prop_id)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         return retVal
 
-    def GetSectionPropertyAssignedBeamList(self, prof_type: int):
+    def GetSectionPropertyAssignedBeamList(self, sectn_prop_id: int):
         """
-        Get section assigned beam list.
+        Gets list of beams assigned with specified section property.
 
         Parameters
         ----------
-        prof_type : int
-            Assign Profile Type:
-                +---------------------+-------+
-                |      Prof Type      | Value |
-                +=====================+=======+
-                | AssignAngle         |   0   |
-                +---------------------+-------+
-                | AssignDoubleAngle   |   1   |
-                +---------------------+-------+
-                | AssignBeam          |   2   |
-                +---------------------+-------+
-                | AssignColumn        |   3   |
-                +---------------------+-------+
-                | AssignChannel       |   4   |
-                +---------------------+-------+
+        sectn_prop_id : int
+            Section Property ID
 
         Returns
         -------
         list of int
-            Returns a list of beam ids.
+            A list of beam ids.
 
         Examples
         --------
@@ -4566,31 +4674,33 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetSectionPropertyAssignedBeamList(2)
         """
-        beamListCount = self._property.GetSectionPropertyAssignedBeamCount(prof_type)
+        beamListCount = self._property.GetSectionPropertyAssignedBeamCount(
+            sectn_prop_id
+        )
         safe_beamList = make_safe_array_long(beamListCount)
         vt_nBeamList = make_variant_vt_ref(
             safe_beamList, automation.VT_ARRAY | automation.VT_I4
         )
         result = self._property.GetSectionPropertyAssignedBeamList(
-            prof_type, vt_nBeamList
+            sectn_prop_id, vt_nBeamList
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
-        return vt_nBeamList[0]
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return list(vt_nBeamList[0])
 
-    def GetIsotropicMaterialAssignedBeamCount(self, material_name: int):
+    def GetIsotropicMaterialAssignedBeamCount(self, material_name: str):
         """
-        Get isotropic material assigned beam count.
+        Get total number of beams assigned with specified isotropic material.
 
         Parameters
         ----------
-        material_name : int
+        material_name : str
             Identification title of the material.
 
         Returns
         -------
         int
-            Returns count of isotropic material assigned beams.
+            Total beam count assign with specified isotropic material.
 
         Examples
         --------
@@ -4606,7 +4716,7 @@ class OSProperty:
 
     def GetIsotropicMaterialAssignedBeamList(self, material_name: str):
         """
-        Get isotropic material assigned beam list.
+        Gets list of beams assigned with specified isotropic material.
 
         Parameters
         ----------
@@ -4616,7 +4726,7 @@ class OSProperty:
         Returns
         -------
         list of int
-            Returns a list of beam ids.
+            A list of beam ids.
 
         Examples
         --------
@@ -4635,9 +4745,9 @@ class OSProperty:
         result = self._property.GetIsotropicMaterialAssignedBeamList(
             material_name, vt_nBeamList
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
-        return vt_nBeamList[0]
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return list(vt_nBeamList[0])
 
     def CreatePropertyFromUserTable(self, section_name: str, table_no: int):
         """
@@ -4653,7 +4763,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns section property reference number if successful. Zero if not found.
+            Section property reference number if it successfully creates it.
 
         Examples
         --------
@@ -4661,11 +4771,14 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.CreatePropertyFromUserTable("H600X300X12X20", 1)
         """
-        return self._property.CreatePropertyFromUserTable(section_name, table_no)
+        result = self._property.CreatePropertyFromUserTable(section_name, table_no)
+        if result == 0:
+            raise OsErrorBase("Unable to create section property from User Table.", -1)
+        return result
 
     def GetBeamSectionPropertyRefNo(self, beam_id: int):
         """
-        Returns the section property reference number of the specified beam.
+        Gets the section property reference number of the specified beam.
 
         Parameters
         ----------
@@ -4675,7 +4788,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns Section property ref number assigned to the  specified beam. Zero if not found.
+            Section property ref number assigned to the specified beam.
 
         Examples
         --------
@@ -4684,7 +4797,13 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.GetBeamSectionPropertyRefNo(beamIds[0])
         """
-        return self._property.GetBeamSectionPropertyRefNo(beam_id)
+        result = self._property.GetBeamSectionPropertyRefNo(beam_id)
+        if result == 0:
+            raise OsErrorBase(
+                "Unable to get section property reference number of the specified beam.",
+                -1,
+            )
+        return result
 
     def GetUserProvidedTableCount(self):
         """
@@ -4693,7 +4812,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the number of UPT tables.
+            The number of UPT tables.
 
         Examples
         --------
@@ -4701,7 +4820,8 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.GetUserProvidedTableCount()
         """
-        return self._property.GetUserProvidedTableCount()
+        result = self._property.GetUserProvidedTableCount()
+        return result
 
     def GetSectionPropertyList(self):
         """
@@ -4710,7 +4830,7 @@ class OSProperty:
         Returns
         -------
         list of int
-            Returns a List of Section Property reference IDs.
+            A List of Section Property reference IDs.
 
         Examples
         --------
@@ -4749,9 +4869,7 @@ class OSProperty:
         >>> result = staad_obj.Property.RemovePropertyFromBeam(1)
         """
         retVal = self._property.RemovePropertyFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def DeleteProperty(self, property_id: int):
         """
@@ -4773,7 +4891,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.DeleteProperty(2)
         """
-        return self._property.DeleteProperty(property_id)
+        retVal = self._property.DeleteProperty(property_id)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return retVal
 
     def GetUserProvidedTableList(self):
         """
@@ -4782,7 +4903,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns UPT table ID list.
+            UPT table ID list.
 
         Examples
         --------
@@ -4812,7 +4933,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns number of section in a given UPT.
+            Number of section in a given UPT.
 
         Examples
         --------
@@ -4834,7 +4955,7 @@ class OSProperty:
         Returns
         -------
         list of strings
-            Returns a list of strings consisting of indexes and corresponding section string names included.
+            List of section string names present in a User Provided Table (UPT).
 
         Examples
         --------
@@ -4854,13 +4975,11 @@ class OSProperty:
         result = self._property.GetUserProvidedTableSectionList(
             table_id, vt_sectionList
         )
-        if result < 0:
+        if not result:
             raise_os_error_if_error_code(-1)
         return list(vt_sectionList[0])
 
-    def GetUserProvidedTableSectionProperties(
-        self, table_id: int, section_name: str, property_count: int = 24
-    ):
+    def GetUserProvidedTableSectionProperties(self, table_id: int, section_name: str):
         """
         Get the section type and section properties of specified UPT section.
 
@@ -4870,13 +4989,11 @@ class OSProperty:
             The User Provided Table (UPT) number ID.
         section_name : str
             UPT section string name given to this section property.
-        property_count : int
-            The number of properties present in section of UPT table (default is 24).
 
         Returns
         -------
         tuple
-            Returns a tuple consisting of UPT Section Type from the below table and list of section property parameters respectively:
+            A tuple consisting of UPT Section Type from the below table and list of section property parameters respectively:
                 +----------------------------+----------------------+------------------------------------------------------+
                 |      User Table Type       |   UPT Section Type   |  propValues                                          |
                 +============================+======================+======================================================+
@@ -4907,6 +5024,7 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> section_type, section_properties = staad_obj.Property.GetUserProvidedTableSectionProperties(9, "section0")
         """
+        property_count = 24
         safe_sectionType = make_safe_array_long(1)
         vt_sectionType = make_variant_vt_ref(safe_sectionType, automation.VT_I4)
         safe_propertyVals = make_safe_array_double(property_count)
@@ -4932,7 +5050,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns property Unique ID.
+            Property Unique ID Name.
 
         Examples
         --------
@@ -4940,7 +5058,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> property_unique_id = staad_obj.Property.GetPropertyUniqueID(3)
         """
-        return self._property.GetPropertyUniqueID(property_unique_id)
+        result = self._property.GetPropertyUniqueID(property_unique_id)
+        if not result:
+            raise OsErrorBase("Unable to get unique Id name for property", -1)
+        return result
 
     def SetPropertyUniqueID(self, property_number: int, property_unique_id: str):
         """
@@ -4973,7 +5094,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns True if delete specification is successful.
+            True if deletes specification successfully.
 
         Examples
         --------
@@ -4982,7 +5103,10 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.DeleteMemberSpec(beamIds[0])
         """
-        return self._property.DeleteMemberSpec(spec_id)
+        result = self._property.DeleteMemberSpec(spec_id)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def RemoveMemberReleaseSpecFromBeam(self, beam_id: int, release_location: int):
         """
@@ -5005,9 +5129,14 @@ class OSProperty:
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> beamIds = staad_obj.Geometry.GetBeamList()
-        >>> staad_obj.Property.RemoveMemberReleaseSpecFromBeam(beamIds[0], 0)
+        >>> result = staad_obj.Property.RemoveMemberReleaseSpecFromBeam(beamIds[0], 0)
         """
-        return self._property.RemoveMemberReleaseSpecFromBeam(beam_id, release_location)
+        result = self._property.RemoveMemberReleaseSpecFromBeam(
+            beam_id, release_location
+        )
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def RemoveMemberOffsetSpecFromBeam(self, beam_id: int, release_location: int):
         """
@@ -5023,7 +5152,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns True if successful.
+            True if successful.
 
         Examples
         --------
@@ -5032,7 +5161,12 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberOffsetSpecFromBeam(beamIds[0], 0)
         """
-        return self._property.RemoveMemberOffsetSpecFromBeam(beam_id, release_location)
+        result = self._property.RemoveMemberOffsetSpecFromBeam(
+            beam_id, release_location
+        )
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def RemoveMemberTrussSpecFromBeam(self, beam_id: int):
         """
@@ -5056,9 +5190,7 @@ class OSProperty:
         >>> result = staad_obj.Property.RemoveMemberTrussSpecFromBeam(beamIds[0])
         """
         retVal = self._property.RemoveMemberTrussSpecFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def RemoveMemberInactiveSpecFromBeam(self, beam_id: int):
         """
@@ -5079,12 +5211,10 @@ class OSProperty:
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> beamIds = staad_obj.Geometry.GetBeamList()
-        >>> staad_obj.Property.RemoveMemberInactiveSpecFromBeam(beamIds[0])
+        >>> result = staad_obj.Property.RemoveMemberInactiveSpecFromBeam(beamIds[0])
         """
         retVal = self._property.RemoveMemberInactiveSpecFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def RemoveMemberTensionSpecFromBeam(self, beam_id: int):
         """
@@ -5108,18 +5238,16 @@ class OSProperty:
         >>> result = staad_obj.Property.RemoveMemberTensionSpecFromBeam(beamIds[0])
         """
         retVal = self._property.RemoveMemberTensionSpecFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
-    def RemoveMemberIgnoreStiffSpecFromBeam(self, beam_id: int):
+    def RemoveMemberIgnoreStiffSpecFromBeam(self, member_id: int):
         """
-        Remove member ignore stiff specification from beam.
+        Remove member ignore stiff specification from given member.
 
         Parameters
         ----------
-        BeamNo : int
-            The beam number ID.
+        member_id : int
+            The member number ID.
 
         Returns
         -------
@@ -5133,10 +5261,8 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberTensionSpecFromBeam(beamIds[0])
         """
-        retVal = self._property.RemoveMemberIgnoreStiffSpecFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        retVal = self._property.RemoveMemberIgnoreStiffSpecFromBeam(member_id)
+        return bool(retVal)
 
     def CreateBeamPropertyFromTableEx(
         self, country_code: int, section_name: str, solid_shape_type: int
@@ -5204,7 +5330,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -5215,9 +5341,12 @@ class OSProperty:
         >>> typeSolidShape = 1
         >>> result = staad_obj.Property.CreateBeamPropertyFromTableEx(nCountryCode, strSectionName, typeSolidShape)
         """
-        return self._property.CreateBeamPropertyFromTableEx(
+        result = self._property.CreateBeamPropertyFromTableEx(
             country_code, section_name, solid_shape_type
         )
+        if result == 0:
+            raise OsErrorBase("Unable to create beam property from table.", -1)
+        return result
 
     def RemoveMemberCompressionSpecFromBeam(self, beam_id: int):
         """
@@ -5241,9 +5370,7 @@ class OSProperty:
         >>> result = staad_obj.Property.RemoveMemberCompressionSpecFromBeam(beamIds[0])
         """
         retVal = self._property.RemoveMemberCompressionSpecFromBeam(beam_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def RemoveMemberCableSpecFromBeam(self, beam_id: int, tension_or_length: int):
         """
@@ -5259,7 +5386,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns True if successful.
+            True if successful.
 
         Examples
         --------
@@ -5268,7 +5395,12 @@ class OSProperty:
         >>> beamIds = staad_obj.Geometry.GetBeamList()
         >>> result = staad_obj.Property.RemoveMemberCableSpecFromBeam(beamIds[0], 0)
         """
-        return self._property.RemoveMemberCableSpecFromBeam(beam_id, tension_or_length)
+        retVal = self._property.RemoveMemberCableSpecFromBeam(
+            beam_id, tension_or_length
+        )
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return retVal
 
     def RemoveElementPlaneStressSpecFromPlate(self, plate_id: int):
         """
@@ -5292,9 +5424,7 @@ class OSProperty:
         >>> result = staad_obj.Property.RemoveElementPlaneStressSpecFromPlate(plateIds[0])
         """
         retVal = self._property.RemoveElementPlaneStressSpecFromPlate(plate_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def RemoveElementIgnoreInplaneRotnSpecFromPlate(self, plate_id: int):
         """
@@ -5318,9 +5448,7 @@ class OSProperty:
         >>> result = staad_obj.Property.RemoveElementIgnoreInplaneRotnSpecFromPlate(plateIds[0])
         """
         retVal = self._property.RemoveElementIgnoreInplaneRotnSpecFromPlate(plate_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def RemoveElementNodeReleaseSpecFromPlate(self, plate_id: int, node_id: int):
         """
@@ -5347,9 +5475,7 @@ class OSProperty:
         >>> result = staad_obj.Property.RemoveElementNodeReleaseSpecFromPlate(plateIds[0], nodeIds[0])
         """
         retVal = self._property.RemoveElementNodeReleaseSpecFromPlate(plate_id, node_id)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
-        return retVal == 0
+        return bool(retVal)
 
     def GetUserProvidedTableNo(self, table_index: int):
         """
@@ -5363,7 +5489,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns User Provided Table (UPT) number ID.
+            User Provided Table (UPT) number ID.
 
         Examples
         --------
@@ -5375,6 +5501,11 @@ class OSProperty:
         retVal = self._property.GetUserProvidedTableNo(table_index)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase(
+                "Unable to get User Provided Table number ID for the given table index",
+                -1,
+            )
         return retVal
 
     def GetUserProvidedTableSectionType(self, table_id: int):
@@ -5389,7 +5520,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns an int for number referring to Section Type Code table:
+            An int for number referring to Section Type Code table:
                 +-------------------------+---------------------+
                 | User Table Type         | UPT Section Type    |
                 +=========================+=====================+
@@ -5423,8 +5554,12 @@ class OSProperty:
         """
         safe_sectionType = make_safe_array_long(1)
         vt_sectionType = make_variant_vt_ref(safe_sectionType, automation.VT_I4)
-        self._property.GetUserProvidedTableSectionType(table_id, vt_sectionType)
-        return vt_sectionType[0]
+        retVal = self._property.GetUserProvidedTableSectionType(
+            table_id, vt_sectionType
+        )
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return int(vt_sectionType[0])
 
     def GetMemberReleaseSpecEx(self, beam_id: int, release_spec_position: int):
         """
@@ -5440,7 +5575,7 @@ class OSProperty:
         Returns
         -------
         tuple
-            Returns a tuple consisting of following items respectively :
+            A tuple consisting of following items respectively :
                 0. Translational release list with 6 elements for 6 DOFs. Element value: No release or spring = 0, release = 1, spring = -1 , Only MP defined = -3 , MPX, MPY or MPZ defined = -2.
                 1. Rotational releases list with 6 elements for 6 DOFs.
                 2. Element values Spring value or partial moment factor in floating point number, Partial moment release factor (same for MX, MY and MZ)
@@ -5476,13 +5611,13 @@ class OSProperty:
             vt_MPFactor,
             vt_MPFactorlist,
         )
-        if result < 1:
+        if not result:
             raise_os_error_if_error_code(-1)
         return (
-            vt_Releaselist[0],
-            vt_SpringConstlist[0],
+            list(vt_Releaselist[0]),
+            list(vt_SpringConstlist[0]),
             vt_MPFactor[0],
-            vt_MPFactorlist[0],
+            list(vt_MPFactorlist[0]),
         )
 
     def GetThicknessPropertyCount(self):
@@ -5492,7 +5627,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns total thickness properties count.
+            Total thickness properties count.
 
         Examples
         --------
@@ -5509,7 +5644,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns a list of Thickness Property ID list.
+            A list of Thickness Property ID list.
 
         Examples
         --------
@@ -5539,7 +5674,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns count of plates which are assigned with the specified Thickness Property reference ID.
+            Count of plates which are assigned with the specified Thickness Property reference ID.
 
         Examples
         --------
@@ -5564,7 +5699,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns a list for plate number list.
+            A list for plate number list.
 
         Examples
         --------
@@ -5598,15 +5733,15 @@ class OSProperty:
 
         Returns
         -------
-        List of floats
-            Returns a list for thickness value list.
+        tuple
+            A tuple for thickness value list (Node 1, Node 2, Node 3 and Node 4).
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> thickness_props = staad_obj.Property.GetThicknessPropertyList()
-        >>> result = staad_obj.Property.GetThicknessPropertyValues(thickness_props[0])
+        >>> node_1_thk, node_2_thk, node_3_thk, node_4_thk = staad_obj.Property.GetThicknessPropertyValues(thickness_props[0])
         """
         safe_ThkList = make_safe_array_double(4)
         vt_ThkList = make_variant_vt_ref(
@@ -5615,8 +5750,11 @@ class OSProperty:
         result = self._property.GetThicknessPropertyValues(
             property_reference_id, vt_ThkList
         )
-        if result < 4:
-            raise_os_error_if_error_code(-1)
+        if result == 0:
+            raise OsErrorBase(
+                "Unable to get thickness property values for the given property reference ID",
+                -1,
+            )
         return vt_ThkList[0]
 
     def GetPlateSectionPropertyRefNo(self, PlateNo: int):
@@ -5631,7 +5769,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -5641,8 +5779,11 @@ class OSProperty:
         >>> result = staad_obj.Property.GetPlateSectionPropertyRefNo(plate_list[0])
         """
         retVal = self._property.GetPlateSectionPropertyRefNo(PlateNo)
-        if retVal < 0:
-            raise_os_error_if_error_code(retVal)
+        if retVal == 0:
+            raise OsErrorBase(
+                "Unable to get section property reference number for the given plate number",
+                -1,
+            )
         return retVal
 
     def RemovePropertyFromPlate(self, plate_id: int):
@@ -5657,7 +5798,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns True if successful.
+            True if successful.
 
         Examples
         --------
@@ -5665,7 +5806,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.RemovePropertyFromPlate(2)
         """
-        return self._property.RemovePropertyFromPlate(plate_id)
+        result = self._property.RemovePropertyFromPlate(plate_id)
+        if not result:
+            raise OsErrorBase("Unable to remove property from the given plate ID", -1)
+        return result
 
     def GetIsotropicMaterialAssignedPlateCount(self, material_name: int):
         """
@@ -5679,7 +5823,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns count of plates assigned with the specific isotropic material.
+            Count of plates assigned with the specific isotropic material.
 
         Examples
         --------
@@ -5701,7 +5845,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns a list for plate id of plates which have material assigned to.
+            A list for plate id of plates which have material assigned to.
 
         Examples
         --------
@@ -5721,7 +5865,7 @@ class OSProperty:
             raise_os_error_if_error_code(-1)
         return vt_PlateList[0]
 
-    def AssignMaterialToSolid(self, material_name: str, solid_ids: list):
+    def AssignMaterialToSolid(self, material_name: str, solid_ids: list | int):
         """
         Assign material to solid.
 
@@ -5735,7 +5879,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns '1' if True else '0' if False.
+            '1' if True else '0' if False.
 
         Examples
         --------
@@ -5744,13 +5888,18 @@ class OSProperty:
         >>> solid_ids = staad_obj.Geometry.GetSolidList()
         >>> result = staad_obj.Property.AssignMaterialToSolid("CONCRETE1", solid_ids)
         """
+        if isinstance(solid_ids, int):
+            solid_ids = [solid_ids]
         safe_SolidNo = make_safe_array_long_input(solid_ids)
         vt_solid_ids = make_variant_vt_ref(
             safe_SolidNo, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.AssignMaterialToSolid(material_name, vt_solid_ids)
+        result = self._property.AssignMaterialToSolid(material_name, vt_solid_ids)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
-    def RemoveMaterialFromSolid(self, solid_id_list: list):
+    def RemoveMaterialFromSolid(self, solid_id_list: list | int):
         """
         Remove Material From the specific Solids.
 
@@ -5762,7 +5911,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 'True' if it succeeds in removing material from solids else 'False'.
+            'true' if it succeeds in removing material from solids else 'False'.
 
         Examples
         --------
@@ -5770,11 +5919,16 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.RemoveMaterialFromSolid([8, 5, 10, 3])
         """
+        if isinstance(solid_id_list, int):
+            solid_id_list = [solid_id_list]
         safe_SolidNoList = make_safe_array_long_input(solid_id_list)
         vt_solid_ids = make_variant_vt_ref(
             safe_SolidNoList, automation.VT_ARRAY | automation.VT_I4
         )
-        return self._property.RemoveMaterialFromSolid(vt_solid_ids)
+        result = self._property.RemoveMaterialFromSolid(vt_solid_ids)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def GetSolidMaterialName(self, solid_id: int):
         """
@@ -5788,7 +5942,7 @@ class OSProperty:
         Returns
         -------
         str
-            Returns material name of the specified solid.
+            Material name of the specified solid.
 
         Examples
         --------
@@ -5797,7 +5951,10 @@ class OSProperty:
         >>> solid_ids = staad_obj.Geometry.GetSolidList()
         >>> result = staad_obj.Property.GetSolidMaterialName(solid_ids[0])
         """
-        return self._property.GetSolidMaterialName(solid_id)
+        result = self._property.GetSolidMaterialName(solid_id)
+        if not result:
+            raise OsErrorBase("Unable to get material name for the given solid ID", -1)
+        return result
 
     def GetIsotropicMaterialAssignedSolidCount(self, material_name: str):
         """
@@ -5811,7 +5968,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns count of solids assigned with the specified isotropic material.
+            Count of solids assigned with the specified isotropic material.
 
         Examples
         --------
@@ -5833,7 +5990,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns a list of int for list of solid.
+            A list of int for list of solid.
 
         Examples
         --------
@@ -5940,7 +6097,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(str, float, float, float, float, float, float, float, float, float, float, float)
-            Returns a Tuple consisting of Modulus of elasticity (E), Poisson's ratio (POI), Shear modulus (G), Weight density (DEN), Coefficient of thermal expansion (ALP), Damping ratio (DAMP), Yield stress (Fy), Tensile strength (Fu), Yield strength ratio (Ry), Tensile strength ratio (Rt) and Compressive strength (Fcu) respectively.
+            A Tuple consisting of Modulus of elasticity (E), Poisson's ratio (POI), Shear modulus (G), Weight density (DEN), Coefficient of thermal expansion (ALP), Damping ratio (DAMP), Yield stress (Fy), Tensile strength (Fu), Yield strength ratio (Ry), Tensile strength ratio (Rt) and Compressive strength (Fcu) respectively.
 
         Examples
         --------
@@ -5984,8 +6141,13 @@ class OSProperty:
             vt_Rt,
             vt_Fcu,
         )
+        if not material_name:
+            raise OsErrorBase(
+                "Unable to get isotropic material properties for the given material number",
+                -1,
+            )
         return (
-            material_name,
+            str(material_name),
             vt_Elasiticity[0],
             vt_Poisson[0],
             vt_ShearModulus[0],
@@ -6011,7 +6173,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(float, float, float, float, float, float, float, float, float, float)
-            Returns a tuple consisting of Modulus of elasticity (E), Poisson's ratio (POI), Weight density (DEN), Coefficient of thermal expansion (ALP), Damping ratio (DAMP), Yield stress (Fy), Tensile strength (Fu), Yield strength ratio (Ry), Tensile strength ratio (Rt) and Compressive strength (Fcu) respectively.
+            A tuple consisting of Modulus of elasticity (E), Poisson's ratio (POI), Weight density (DEN), Coefficient of thermal expansion (ALP), Damping ratio (DAMP), Yield stress (Fy), Tensile strength (Fu), Yield strength ratio (Ry), Tensile strength ratio (Rt) and Compressive strength (Fcu) respectively.
 
         Examples
         --------
@@ -6104,15 +6266,21 @@ class OSProperty:
         Returns
         -------
         int
-            Returns table number ID if successful else '0' if create new User Provided Table encountered generate Error.
+            Table number ID if successful else '0' if create new User Provided Table encountered generate Error.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.CreateUPTTableEx(6, 7) // Create User Provided Table with TableRef=6 and TableType=7 (Tube)
+        >>> result = staad_obj.Property.CreateUPTTableEx(6, 7) # Create User Provided Table with TableRef=6 and TableType=7 (Tube)
         """
-        return self._property.CreateUPTTableEx(table_ref_id, table_type)
+        result = self._property.CreateUPTTableEx(table_ref_id, table_type)
+        if result == 0:
+            raise OsErrorBase(
+                "Unable to create User Provided Table with the given table reference ID and table type",
+                -1,
+            )
+        return result
 
     def GetShapeCode(self, country_code: int, section_name: str):
         """
@@ -6164,7 +6332,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the Shape Code according to the table below else '-1' if it encounters generate error:
+            The Shape Code according to the table below else '-1' if it encounters generate error:
                 +-----------------------------+----------------------------------------+
                 | Country                     | Shape Code                             |
                 +=============================+========================================+
@@ -6566,14 +6734,14 @@ class OSProperty:
         Parameters
         ----------
         country_code : int
-            Country id. (Refer OsProperty.CreateBeamPropertyFromTable for Country ID details).
+            Country id. (Refer Property.CreateBeamPropertyFromTable for Country ID details).
         section_name : str
             Section Name(Type: String).
 
         Returns
         -------
         int
-            Returns record number for specific section.
+            Record number for specific section.
 
         Examples
         --------
@@ -6593,7 +6761,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns Member Attribute Count
+            Member Attribute Count
 
         Examples
         --------
@@ -6610,7 +6778,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(list, list, int)
-            Returns a tuple consisting of attribute name list, the corresponding attribute value list and attribute count respectively.
+            A tuple consisting of attribute name list, the corresponding attribute value list and attribute count respectively.
 
         Examples
         --------
@@ -6630,7 +6798,7 @@ class OSProperty:
         count = self._property.GetMemberAttributeList(
             vt_attributeNameList, vt_attributeValueList
         )
-        return vt_attributeNameList[0], vt_attributeValueList[0], count
+        return list(vt_attributeNameList[0]), list(vt_attributeValueList[0]), count
 
     def GetUserProvidedTableSectionPropertyCount(
         self, upt_table_id: int, section_name: str
@@ -6648,7 +6816,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the number of section(s) in given UPT.
+            The number of section(s) in given UPT.
 
         Examples
         --------
@@ -6732,13 +6900,14 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.reateBeamPropertyFromTableComposite(10, strInput, 2, [10.3, 18.2, 11.7, 17.5])
+        >>> staad_obj.Property.SetMaterialName("STEEL")
+        >>> result = staad_obj.Property.CreateBeamPropertyFromTableComposite(10, "ISMB600", 6, [10.3, 18.2, 11.7, 17.5])
         """
         safe_AddSpeclist = make_safe_array_double_input(additional_spec_list)
         vt_AddSpeclist = make_variant_vt_ref(
@@ -6749,6 +6918,10 @@ class OSProperty:
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase(
+                "Unable to create beam property from table composite.", -1
+            )
         return retVal
 
     def CreateBeamPropertyFromTableWithCoverPlates(
@@ -6823,13 +6996,14 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.CreateBeamPropertyFromTableWithCoverPlates(4, "ISMB600", 4, [10.6, 3.4, 7.2, 20.1])
+        >>> staad_obj.Property.SetMaterialName("STEEL")
+        >>> result = staad_obj.Property.CreateBeamPropertyFromTableWithCoverPlates(10, "ISMB600", 7, [10.6, 3.41])
         """
         safe_AddSpeclist = make_safe_array_double_input(additional_spec_list)
         vt_AddSpeclist = make_variant_vt_ref(
@@ -6840,6 +7014,10 @@ class OSProperty:
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase(
+                "Unable to create beam property from table with cover plates.", -1
+            )
         return retVal
 
     def AddUPTPropertyWIDEFLANGEUNEQUAL(
@@ -6887,8 +7065,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns 'True' if add unequal wide flange successful.\n
-            Returns 'False' if it encounters generate error.
+            'true' if add unequal wide flange successful.
 
         Examples
         --------
@@ -6901,9 +7078,12 @@ class OSProperty:
         vt_PropSpeclist = make_variant_vt_ref(
             safe_PropSpeclist, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.AddUPTPropertyWIDEFLANGEUNEQUAL(
+        result = self._property.AddUPTPropertyWIDEFLANGEUNEQUAL(
             table_reference_id, section_name, vt_PropSpeclist
         )
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def AddUPTPropertyWIDEFLANGECOMPOSITE(
         self, table_reference_id: int, section_name: str, profile_spec_list: list
@@ -6964,7 +7144,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns 'True' if OK, else 'False' if Error.
+            'true' if OK, else 'False' if Error.
 
         Examples
         --------
@@ -6977,9 +7157,12 @@ class OSProperty:
         vt_PropSpeclist = make_variant_vt_ref(
             safe_varPropSpeclist, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.AddUPTPropertyWIDEFLANGECOMPOSITE(
+        result = self._property.AddUPTPropertyWIDEFLANGECOMPOSITE(
             table_reference_id, section_name, vt_PropSpeclist
         )
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def CreateTeePropertyFromTable(
         self, country_code: int, section_name: str, spec_type: int
@@ -7008,19 +7191,21 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> result = staad_obj.Property.CreateTeePropertyFromTable(7, "ISNT20", 9)
+        >>> result = staad_obj.Property.CreateTeePropertyFromTable(10, "ISNT20", 0)
         """
         retVal = self._property.CreateTeePropertyFromTable(
             country_code, section_name, spec_type
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Unable to create TEE property from table.", -1)
         return retVal
 
     def SetTypeToIsotropicMaterial(self, material_name: str, material_type: int):
@@ -7032,12 +7217,12 @@ class OSProperty:
         material_name : str
             Identification title of the material.
         material_type : int
-            Material Type.
+            Material Type. Refer to 'Property.GetTypeForIsotropicMaterial'
 
         Returns
         -------
         bool
-            Returns True if successful.
+            True if successful.
 
         Examples
         --------
@@ -7045,7 +7230,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> result = staad_obj.Property.SetTypeToIsotropicMaterial("TestMat", 4)
         """
-        return self._property.SetTypeToIsotropicMaterial(material_name, material_type)
+        result = self._property.SetTypeToIsotropicMaterial(material_name, material_type)
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def GetTypeForIsotropicMaterial(self, material_name: str):
         """
@@ -7059,7 +7247,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns an int for Material Type:
+            An int for Material Type:
                 +-------+-------------------------------+
                 |  No.  | Material Type                 |
                 +=======+===============================+
@@ -7101,7 +7289,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns section property number ID if successful.
+            Section property number ID if successful.
 
         Examples
         --------
@@ -7112,6 +7300,10 @@ class OSProperty:
         retVal = self._property.CreatePropertyFromUPTTable(table_id, section_name)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase(
+                "Unable to create section property from User Provided Table (UPT)", -1
+            )
         return retVal
 
     def CreateParametricSurfaceThicknessProperty(self, node_thickness_list: list):
@@ -7126,7 +7318,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
@@ -7138,7 +7330,12 @@ class OSProperty:
         vt_Thickness = make_variant_vt_ref(
             safe_Thickness, automation.VT_ARRAY | automation.VT_R8
         )
-        return self._property.CreateParametricSurfaceThicknessProperty(vt_Thickness)
+        result = self._property.CreateParametricSurfaceThicknessProperty(vt_Thickness)
+        if result == 0:
+            raise OsErrorBase(
+                "Unable to create parametric surface thickness property.", -1
+            )
+        return result
 
     def GetUptGeneralProfilePointsCount(
         self, table_reference_id: int, section_name: str
@@ -7156,7 +7353,7 @@ class OSProperty:
         Returns
         -------
         tuple
-            Returns a Tuple consisting of count of outer profile points and count of inner profile points(Reserved, not be used now) respectively.
+            A Tuple consisting of count of outer profile points and count of inner profile points(Reserved, not be used now) respectively.
 
         Examples
         --------
@@ -7193,7 +7390,7 @@ class OSProperty:
         Returns
         -------
         Tuple of float
-            Returns a tuple consisting of profile points coordinate list in Z and profile points coordinate list in Y respectively.
+            A tuple consisting of profile points coordinate list in Z and profile points coordinate list in Y respectively.
 
         Examples
         --------
@@ -7220,7 +7417,10 @@ class OSProperty:
             table_number_id, section_name, is_inner, vt_varZP, vt_varYP
         )
         if count == 0:
-            raise_os_error_if_error_code(-1)
+            raise OsErrorBase(
+                "Unable to retrieve Profile Points coordinate from User Provided general section Table (UPT).",
+                -1,
+            )
         return vt_varZP[0], vt_varYP[0]
 
     def GetUptGeneralStressLocationPoints(
@@ -7239,7 +7439,7 @@ class OSProperty:
         Returns
         -------
         Tuple of list: Tuple(list, list)
-            Returns a tuple consisting of list (of size 4) consisting of stress Location coordinate in Z and list (of size 4) consisting stress location coordinate in Y respectively.
+            A tuple consisting of list (of size 4) consisting of stress Location coordinate in Z and list (of size 4) consisting stress location coordinate in Y respectively.
 
         Examples
         --------
@@ -7255,17 +7455,20 @@ class OSProperty:
             table_reference_id, section_name, vt_ZP, vt_YP
         )
         if count == 0:
-            raise_os_error_if_error_code(-1)
+            raise OsErrorBase(
+                "Unable to retrieve Stress Location Points in local coordinate from User Provided general section Table (UPT).",
+                -1,
+            )
         return (vt_ZP[0], vt_YP[0])
 
     def GetInactiveMemberCount(self):
         """
-        Returns the total number of inactive members in the current model.
+        Gets the total number of inactive members in the current model.
 
         Returns
         -------
         int
-            Returns the total number of inactive members.
+            The total number of inactive members.
 
         Examples
         --------
@@ -7282,7 +7485,7 @@ class OSProperty:
         Returns
         -------
         List of int
-            Returns a list for list of member number ids of inactive members.
+            A list for list of member number ids of inactive members.
 
         Examples
         --------
@@ -7310,13 +7513,13 @@ class OSProperty:
         Returns
         -------
         float
-            Returns a float for alpha angle (in Radian).
+            A float for alpha angle (in Radian).
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.GetAlphaAngleForSection(7)
+        >>> angle_value = staad_obj.Property.GetAlphaAngleForSection(7)
         """
         safe_dAlpha = make_safe_array_double(1)
         vt_dAlpha = make_variant_vt_ref(safe_dAlpha, automation.VT_R8)
@@ -7337,7 +7540,7 @@ class OSProperty:
         Returns
         -------
         Tuple : tuple(int, int)
-            Returns a tuple consisting of offset value of centroid along Y axis and offset value of centroid along Z axis, respectively.
+            A tuple consisting of offset value of centroid along Y axis and offset value of centroid along Z axis, respectively.
 
         Examples
         --------
@@ -7468,13 +7671,14 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned section property ID if successful.
+            The assigned section property ID if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> status = staad_obj.Property.CreateWideFlangePropertyFromTable(7, "HP10X42", "TB", [7.9, 4.6, 18.3, 1.8])
+        >>> staad_obj.Property.SetMaterialName("STEEL")
+        >>> status = staad_obj.Property.CreateWideFlangePropertyFromTable(1, "HP10X42", 9, [1.25, 0.15, 1.0, 0.12])
         """
         if (specs_list is None) or (len(specs_list) == 0):
             specs_list = [0]
@@ -7751,8 +7955,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns '1' if OK else '0' if no element release specification present.
+        bool
+            True if successful.
 
         Examples
         --------
@@ -7760,7 +7964,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.RemoveAllElementNodeReleaseSpec()
         """
-        return self._property.RemoveAllElementNodeReleaseSpec()
+        result = self._property.RemoveAllElementNodeReleaseSpec()
+        if not result:
+            raise_os_error_if_error_code(-1)
+        return result
 
     def CreateElementOffsetSpec(
         self,
@@ -7789,7 +7996,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -7797,9 +8004,12 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateElementOffsetSpec(7, 3, 9.9, 4.6, 14.7)
         """
-        return self._property.CreateElementOffsetSpec(
+        retVal = self._property.CreateElementOffsetSpec(
             offset_direction, plate_node_index, x_offset, y_offset, z_offset
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def CreateElementLocalZOffsetSpec(
         self,
@@ -7825,7 +8035,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number ID if successful.
+            The assigned specification number ID if successful.
 
         Examples
         --------
@@ -7833,12 +8043,15 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.CreateElementLocalZOffsetSpec(3.6, 17.0, 8.6, 10.0)
         """
-        return self._property.CreateElementLocalZOffsetSpec(
+        retVal = self._property.CreateElementLocalZOffsetSpec(
             node1_localz_offset,
             node2_localz_offset,
             node3_localz_offset,
             node4_localz_offset,
         )
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
 
     def GetElementLocalOffset(self, plate_id: int, plate_node_index: int):
         """
@@ -7854,7 +8067,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(float, float, float)
-            Returns a tuple consisting of the offset x coordinate, the offset y coordinate, the offset z coordinate, respectively.
+            A tuple consisting of the offset x coordinate, the offset y coordinate, the offset z coordinate, respectively.
 
         Examples
         --------
@@ -7872,8 +8085,10 @@ class OSProperty:
         result = self._property.GetElementLocalOffset(
             plate_id, plate_node_index, vt_OffsetX, vt_OffsetY, vt_OffsetZ
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise OsErrorBase(
+                "Unable to get element local offset of given plate and node", -1
+            )
         return vt_OffsetX[0], vt_OffsetY[0], vt_OffsetZ[0]
 
     def GetElementGlobalOffSet(self, plate_id: int, plate_node_index: int):
@@ -7890,7 +8105,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(float, float, float)
-            Returns a tuple consisting of the offset x coordinate (global), the offset y coordinate (global) and the offset z coordinate (global) respectively.
+            A tuple consisting of the offset x coordinate (global), the offset y coordinate (global) and the offset z coordinate (global) respectively.
 
         Examples
         --------
@@ -7908,8 +8123,10 @@ class OSProperty:
         result = self._property.GetElementGlobalOffSet(
             plate_id, plate_node_index, vt_OffsetX, vt_OffsetY, vt_OffsetZ
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise OsErrorBase(
+                "Unable to get element global offset of given plate and node", -1
+            )
         return vt_OffsetX[0], vt_OffsetY[0], vt_OffsetZ[0]
 
     def GetElementOffSetSpec(self, plate_id: int, plate_node_index: int):
@@ -7926,7 +8143,7 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(int, float, float, float)
-            Returns a list consisting of the offset direction at Local (= 0) or Global (= 1) or Z-Offset (=2) of the member, the offset x coordinate (global), the offset y coordinate (global), the offset z coordinate and (global) respectively.
+            A list consisting of the offset direction at Local (= 0) or Global (= 1) or Z-Offset (=2) of the member, the offset x coordinate (global), the offset y coordinate (global), the offset z coordinate and (global) respectively.
 
         Examples
         --------
@@ -7951,18 +8168,20 @@ class OSProperty:
             vt_OffsetY,
             vt_OffsetZ,
         )
-        if result < 0:
-            raise_os_error_if_error_code(result)
+        if not result:
+            raise OsErrorBase(
+                "Unable to get element global offset of given plate and node", -1
+            )
         return (vt_Direction[0], vt_OffsetX[0], vt_OffsetY[0], vt_OffsetZ[0])
 
     def GetCountofSectionPropertyValuesEx(self):
         """
-        Returns the total count of Section Property values.
+        Gets the total count of Section Property values.
 
         Returns
         -------
         int
-            Returns the total count of Section Property values.
+            The total count of Section Property values.
 
         Examples
         --------
@@ -8007,7 +8226,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the assigned specification number id if successful.
+            The assigned specification number id if successful.
 
         Examples
         --------
@@ -8030,12 +8249,12 @@ class OSProperty:
 
     def GetElementOffsetSpecCount(self):
         """
-        Returns the total number of element offset specifications in the current model.
+        Gets the total number of element offset specifications in the current model.
 
         Returns
         -------
         int
-            Returns the total number of element offset specifications.
+            The total number of element offset specifications.
 
         Examples
         --------
@@ -8051,8 +8270,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns 1 if OK else 0 if no element offset specifications present.
+        bool
+            True if all element offset specifications were successfully removed.
 
         Examples
         --------
@@ -8060,7 +8279,10 @@ class OSProperty:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.Property.RemoveAllElementOffsetSpec()
         """
-        return self._property.RemoveAllElementOffsetSpec()
+        retVal = self._property.RemoveAllElementOffsetSpec()
+        if not retVal:
+            raise OsErrorBase("Unable to remove element offset specifications.", -1)
+        return retVal
 
     def UpdatePropertiesToDesignSection(self):
         """
@@ -8069,24 +8291,30 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 1 if assignment is successful else 0 if assignment is unsuccessful.
+            1 if assignment successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.UpdatePropertiesToDesignSection()
+        >>> status = staad_obj.Property.UpdatePropertiesToDesignSection()
         """
-        return self._property.UpdatePropertiesToDesignSection()
+        retVal = self._property.UpdatePropertiesToDesignSection()
+        if not retVal:
+            raise OsErrorBase(
+                "Unable to update all the section properties that have been designed with a SELECT MEMBER command.",
+                -1,
+            )
+        return retVal
 
     def GetFireProofedBeamCount(self):
         """
-        Returns count of beams which are fire proofed.
+        Gets the count of beams which are fire proofed.
 
         Returns
         -------
         int
-            Returns the total number of fire proofed beams in the current model.
+            The total number of fire proofed beams in the current model.
 
         Examples
         --------
@@ -8098,12 +8326,12 @@ class OSProperty:
 
     def GetFireProofedBeamList(self):
         """
-        Returns a list of the member ids of all the fire proofed members in the current model.
+        Gets a list of the member ids of all the fire proofed members in the current model.
 
         Returns
         -------
         List of int
-            Returns for list of member number ids of all the members that are fire proofed.
+            List of member number ids of all the members that are fire proofed.
 
         Examples
         --------
@@ -8133,14 +8361,14 @@ class OSProperty:
         Returns
         -------
         tuple: Tuple(int, float, float)
-            Returns a tuple consisting of type of fire proof [1 for BFP, 2 for CFP], thickness of fire proof and density of fire proof respectively.
+            A tuple consisting of type of fire proof [1 for BFP, 2 for CFP], thickness of fire proof and density of fire proof respectively.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> beam_ids = staad_obj.Property.GetBeamList()
-        >>> count = staad_obj.Property.GetFireProofDataForBeam(beam_ids[0])
+        >>> fire_proofed_beam_list = staad_obj.Property.GetFireProofedBeamList()
+        >>> fire_proof_type, thickness, density = staad_obj.Property.GetFireProofDataForBeam(fire_proofed_beam_list[0])
         """
         safe_FireProofType = make_safe_array_long(1)
         vt_FireProofType = make_variant_vt_ref(safe_FireProofType, automation.VT_I4)
@@ -8157,12 +8385,12 @@ class OSProperty:
 
     def GetFireProofingSpecCount(self):
         """
-        Returns the count of different fire proofing specifications in the model.
+        Gets the count of different fire proofing specifications in the model.
 
         Returns
         -------
         int
-            Returns the total number of fire proofing specification.
+            The total number of fire proofing specification.
 
         Examples
         --------
@@ -8184,13 +8412,13 @@ class OSProperty:
         Returns
         -------
         tuple : Tuple(int, float, float, int)
-            Returns a tuple consisting of type of fire proof, thickness of fire proof, density of fire proof & number of beams assigned respectively.
+            A tuple consisting of type of fire proof, thickness of fire proof, density of fire proof & number of beams assigned respectively.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.GetFireProofingSpecDetails(1)
+        >>> fire_proof_type, thickness, density, assign_count = staad_obj.Property.GetFireProofingSpecDetails(1)
         """
         safe_FireProofType = make_safe_array_long(1)
         vt_FireProofType = make_variant_vt_ref(safe_FireProofType, automation.VT_I4)
@@ -8219,7 +8447,7 @@ class OSProperty:
         Returns
         -------
         int
-            Returns the number of beams assigned with a particular fire proofing specification.
+            The number of beams assigned with a particular fire proofing specification.
 
         Examples
         --------
@@ -8241,13 +8469,13 @@ class OSProperty:
         Returns
         -------
         List
-            Returns for list of member numbers IDs of all the members that are fire proofed with a particular fire proofing specification.
+            List of member numbers IDs of all the members that are fire proofed with a particular fire proofing specification.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.GetFireProofingSpecAssignedBeamList(5)
+        >>> beam_list = staad_obj.Property.GetFireProofingSpecAssignedBeamList(5)
         """
         count = self._property.GetFireProofingSpecAssignedBeamCount(index)
         safe_FireProofedBeamList = make_safe_array_long(count)
@@ -8281,13 +8509,13 @@ class OSProperty:
         Returns
         -------
         int
-            Returns zero based index for the newly created specification if successful.
+            Zero based index for the newly created specification if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.CreateMemberFireProofingSpec(1, 3.5, 6.4)
+        >>> status = staad_obj.Property.CreateMemberFireProofingSpec(1, 3.5, 6.4)
         """
         retval = self._property.CreateMemberFireProofingSpec(
             fire_proof_type, thickness_value, density
@@ -8308,15 +8536,20 @@ class OSProperty:
         Returns
         -------
         int
-            Returns 1 if fire proofing specification removed from beam else 0 if unable to remove fire proofing specification from beam.
+            1 if fire proofing specification removed from beam.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.RemoveMemberFireProofingSpecFromBeam(1)
+        >>> status = staad_obj.Property.RemoveMemberFireProofingSpecFromBeam(1)
         """
-        return self._property.RemoveMemberFireProofingSpecFromBeam(beam_id)
+        retVal = self._property.RemoveMemberFireProofingSpecFromBeam(beam_id)
+        if retVal == 0:
+            raise OsErrorBase(
+                "Unable to remove member fire proofing specification from beam.", -1
+            )
+        return retVal
 
     def GetBeamSectionDisplayName(self, beam_id: int):
         """
@@ -8330,7 +8563,7 @@ class OSProperty:
         Returns
         -------
         str
-            Returns the section string name if successful else empty string if the specified beam is not found or property is not assigned to it. Refer to the table below for probable section names :
+            The section string name if successful else empty string if the specified beam is not found or property is not assigned to it. Refer to the table below for probable section names :
                 +----------+-------------------------------------------+----------------------------------+--------------------------------+
                 | Sl No.   | Section Type                              | In STD File                      | GetBeamSectionName             |
                 +==========+===========================================+==================================+================================+
@@ -8356,9 +8589,12 @@ class OSProperty:
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> beam_ids = staad_obj.Geometry.GetBeamList()
-        >>> count = staad_obj.Property.GetBeamSectionDisplayName(beam_ids[0])
+        >>> section_name = staad_obj.Property.GetBeamSectionDisplayName(beam_ids[0])
         """
-        return self._property.GetBeamSectionDisplayName(beam_id)
+        retVal = self._property.GetBeamSectionDisplayName(beam_id)
+        if not retVal:
+            raise OsErrorBase("Unable to retrieve beam section display name.", -1)
+        return retVal
 
     def SetStandardProfileDBFolder(self, folder_name: str):
         """
@@ -8378,7 +8614,7 @@ class OSProperty:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.SetStandardProfileDBFolder("C:\\Folder_Path\\Profiles")
+        >>> status = staad_obj.Property.SetStandardProfileDBFolder("C:\\Folder_Path\\Profiles")
         """
         retVal = self._property.SetStandardProfileDBFolder(folder_name)
         if retVal < 0:
@@ -8392,13 +8628,13 @@ class OSProperty:
         Returns
         -------
         str
-            Returns the standard profile database folder path.
+            The standard profile database folder path.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> count = staad_obj.Property.GetStandardProfileDBFolder()
+        >>> db_folder_path = staad_obj.Property.GetStandardProfileDBFolder()
         """
         return self._property.GetStandardProfileDBFolder()
 
@@ -8409,7 +8645,7 @@ class OSProperty:
         Returns
         -------
         str
-            Returns the standard profile default database folder path.
+            The standard profile default database folder path.
 
         Examples
         --------
@@ -8431,7 +8667,7 @@ class OSProperty:
         Returns
         -------
         bool
-            Returns 'True' if section source is standard database else 'False' if section source is other than standard database.
+            'true' if section source is standard database else 'False' if section source is other than standard database.
 
         Examples
         --------
@@ -8453,7 +8689,7 @@ class OSProperty:
         Returns
         -------
         str
-            Returns <Non-Empty-String> if the standard section database name if successful else <Empty-String> if specified section property reference does not belong to Standard section database.
+            Standard section database name if successful else empty string if specified section property reference does not belong to Standard section database.
 
         Examples
         --------
@@ -8475,7 +8711,7 @@ class OSProperty:
         Returns
         -------
         str
-            Returns <Non-Empty-String> if the standard section database name if successful else <Empty-String> if specified section property reference does not belong to Standard section database.
+            Standard section table name if successful else empty string if specified section property reference does not belong to Standard section database.
 
         Examples
         --------
@@ -8496,8 +8732,8 @@ class OSProperty:
 
         Returns
         -------
-        int
-            Returns <Non-Empty-String> if the standard section database name if successful else <Empty-String> if specified section property reference does not belong to Standard section database.
+        str
+            Standard section name if successful else empty string if specified section property reference does not belong to Standard section database.
 
         Examples
         --------

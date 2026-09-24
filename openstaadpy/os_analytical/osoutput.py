@@ -2,8 +2,11 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .oserrors import OsErrorBase, raise_os_error_if_error_code
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
     create_bstr,
     create_variant_float,
     make_byref,
@@ -11,10 +14,10 @@ from .openStaadHelper import (
     make_safe_array_double_input,
     make_safe_array_long,
     make_safe_array_long_input,
+    make_two_dimensional_safe_array_double,
     make_variant_vt_ref,
 )
-from comtypes import automation
-from comtypes import CoInitialize
+from .oserrors import OsErrorBase, raise_os_error_if_error_code
 from .ossupport import OSSupport
 
 
@@ -417,7 +420,7 @@ class OSOutput:
 
     def GetNodeDisplacements(self, nodeNo: int, loadCaseNo: int):
         """
-        Get the displacements for a given node.
+        Gets the nodal displacements for the node and load case specified.
 
         Parameters
         ----------
@@ -441,7 +444,9 @@ class OSOutput:
         >>> loadCases = staad_obj.Load.GetPrimaryLoadCaseNumbers()
         >>> staad_obj.AnalyzeEx(1, 1, 1)
         >>>
-        >>> displacements = staad_obj.Output.GetNodeDisplacements(nodeList[3], loadCases[0])
+        >>> are_results_available = staad_obj.Output.AreResultsAvailable()
+        >>> if (are_results_available):
+        >>>     displacements = staad_obj.Output.GetNodeDisplacements(nodeList[3], loadCases[0])
         """
         vt_Displacement = make_safe_array_double(6)
         re_Displacement = make_variant_vt_ref(
@@ -455,7 +460,7 @@ class OSOutput:
 
     def GetSupportReactions(self, nodeNo: int, loadCaseNo: int):
         """
-        Get the support reactions for a given support.
+        Get the support reactions for the node and load case specified.
 
         Parameters
         ----------
@@ -467,7 +472,7 @@ class OSOutput:
         Returns
         -------
         list
-            List with Reaction in GLOBAL direction:[ FX, FY, FZ, MX, MY, MZ]
+            List with Support Reactions in GLOBAL direction: [FX, FY, FZ, MX, MY, MZ]
 
         Example
         -------
@@ -495,7 +500,7 @@ class OSOutput:
 
     def GetMemberEndDisplacements(self, memberNo: int, end: int, loadCaseNo: int):
         """
-        Get the end displacements for a given member.
+        Get the member end displacements at member with given member number, for specified member end and load case.
 
         Parameters
         ----------
@@ -523,7 +528,7 @@ class OSOutput:
         >>>
         >>> memberEndDisplacements = staad_obj.Output.GetMemberEndDisplacements(beamList[0], 0, loadCases[0])
         """
-        vt_Displacement = make_safe_array_double(6)
+        vt_Displacement = make_safe_array_double(3)
         re_Displacement = make_variant_vt_ref(
             vt_Displacement, automation.VT_ARRAY | automation.VT_R8
         )
@@ -539,7 +544,7 @@ class OSOutput:
         self, memberNo: int, end: int, loadCaseNo: int, LocalOrGlobal: int
     ):
         """
-        Get the end forces for a given member.
+        Get the member end forces at member with given member number, for specified member end and load case.
 
         Parameters
         ----------
@@ -615,8 +620,8 @@ class OSOutput:
                 +---------------+---------------+----------------------------------------------------------+
                 | 7             | SXY           |  Shear stress in the local XY plane                      |
                 +---------------+---------------+----------------------------------------------------------+
-            Note :
-                - For additional information, please refer to Section: "Sign Convention of Plate Element Stresses and Moments" and Section 5.42 of the Technical Reference manual.
+
+            For additional information, please refer to Section: "Sign Convention of Plate Element Stresses and Moments" and Section 5.42 of the Technical Reference manual.
 
         Example
         -------
@@ -644,7 +649,7 @@ class OSOutput:
 
     def GetPlateCenterNormalPrincipalStresses(self, plateNo: int, loadCaseNo: int):
         """
-        Get principal stresses of specified plate.
+        Get principal stresses of specified plate of given plate number and load case.
 
         Parameters
         ----------
@@ -665,11 +670,11 @@ class OSOutput:
         >>>
         >>> staad_obj = os_analytical.connect()
         >>>
-        >>> beamList = staad_obj.Geometry.GetPlateList()
+        >>> plateList = staad_obj.Geometry.GetPlateList()
         >>> loadCases = staad_obj.Load.GetPrimaryLoadCaseNumbers()
         >>> staad_obj.AnalyzeEx(1, 0, 1)
         >>>
-        >>> plateCenterNormalPrincipalStresses = staad_obj.Output.GetPlateCenterNormalPrincipalStresses(beamList[0], loadCases[0])
+        >>> plateCenterNormalPrincipalStresses = staad_obj.Output.GetPlateCenterNormalPrincipalStresses(plateList[0], loadCases[0])
         """
         safe_pdSMAXTop = make_safe_array_double(1)
         safe_pdSMINTop = make_safe_array_double(1)
@@ -679,9 +684,11 @@ class OSOutput:
         pdSMINTop = make_variant_vt_ref(safe_pdSMINTop, automation.VT_R8)
         pdSMAXBottom = make_variant_vt_ref(safe_pdSMAXBottom, automation.VT_R8)
         pdSMINBottom = make_variant_vt_ref(safe_pdSMINBottom, automation.VT_R8)
-        self._output.GetPlateCenterNormalPrincipalStresses(
+        result = self._output.GetPlateCenterNormalPrincipalStresses(
             plateNo, loadCaseNo, pdSMAXTop, pdSMINTop, pdSMAXBottom, pdSMINBottom
         )
+        if not result:
+            raise_os_error_if_error_code(-1)
         return (pdSMAXTop[0], pdSMINTop[0], pdSMAXBottom[0], pdSMINBottom[0])
 
     def GetAllPlateCenterForces(self, plateNo: int, loadCaseNo: int):
@@ -697,8 +704,8 @@ class OSOutput:
 
         Returns
         -------
-        list of float
-            list of plate center forces organized in following order:
+        list
+            List of plate center forces organized in order as shown in below table.
                 +---------------+---------------+----------------------------------------------------------+
                 | List Index    | Variable      | Load Type                                                |
                 +===============+===============+==========================================================+
@@ -712,8 +719,8 @@ class OSOutput:
                 +---------------+---------------+----------------------------------------------------------+
                 | 4             | SXY           |  Shear stress in the local XY plane                      |
                 +---------------+---------------+----------------------------------------------------------+
-            Note :
-                - For additional information, please refer to Section: "Sign Convention of Plate Element Stresses and Moments" and Section 5.42 of the Technical Reference manual.
+
+            For additional information, please refer to Section: "Sign Convention of Plate Element Stresses and Moments" and Section 5.42 of the Technical Reference manual:
 
 
         Example
@@ -740,7 +747,7 @@ class OSOutput:
 
     def GetAllPlateCenterMoments(self, plateNo: int, loadCaseNo: int):
         """
-        Get the plate center stresses (Shear & Membrane) for the specified plate for specified load case.
+        Get the plate center moments for the specified plate for specified load case.
 
         Parameters
         ----------
@@ -762,8 +769,8 @@ class OSOutput:
                 +---------------+---------------+----------------------------------------------------------+
                 | 2             | MXY           |  Torsional Moment per unit width in the local X-Y plane  |
                 +---------------+---------------+----------------------------------------------------------+
-            Note :
-                - For additional information, please refer to Section: "Sign Convention of Plate Element Stresses and Moments" and Section 5.42 of the Technical Reference manual.
+
+            For additional information, please refer to Section: "Sign Convention of Plate Element Stresses and Moments" and Section 5.42 of the Technical Reference manual.
 
 
         Example
@@ -805,6 +812,7 @@ class OSOutput:
         -------
         list of float
             list with solid normal stresses SXX, SYY and SZZ (in order).
+            For additional information, please refer to Section: "Output of Element Stresses" of the Technical Reference manual.
 
         Example
         -------
@@ -841,7 +849,7 @@ class OSOutput:
         Returns
         -------
         float
-            Returns the critical steel design ratio.
+            The critical steel design ratio.
 
         Example
         -------
@@ -874,7 +882,7 @@ class OSOutput:
         memberNo : int
             Member number ID.
         dir: str
-            Bending direction in LOCAL coordinate: MY or MZ.
+            Bending direction in LOCAL coordinate: "MY" or "MZ".
         loadCaseNo : int
             The load case number.
 
@@ -920,7 +928,7 @@ class OSOutput:
         memberNo : int
             Member number ID.
         dir: str
-            Force direction in LOCAL coordinate: FY or FZ.
+            Force direction in LOCAL coordinate: "FY" or "FZ".
         loadCaseNo : int
             The load case number.
 
@@ -1003,14 +1011,14 @@ class OSOutput:
 
     def GetMaxSectionDisplacement(self, memberNo: int, dir: str, loadCaseNo: int):
         """
-        Gets the maximum section displacements for specified member number, direction, and load case.
+        Gets the maximum section displacements for member with specified member number, direction, and load case.
 
         Parameters
         ----------
         memberNo : int
             Member number ID.
         dir: str
-            Direction in GLOBAL: X, Y or Z
+            Direction in GLOBAL: "X", "Y" or "Z"
         loadCaseNo : int
             The load case number.
 
@@ -1138,7 +1146,7 @@ class OSOutput:
         self, plateNo: int, loadCaseNo: int
     ):
         """
-        Get all plate center principal stresses and angles.
+        Get principal stresses and angles of specified plate and loadcase.
 
         Parameters
         ----------
@@ -1496,7 +1504,7 @@ class OSOutput:
         Returns
         -------
         str
-            Returns design section name for the specified member. Returns empty string if not found.
+            Design section name for the specified member. Returns empty string if not found.
 
         Example
         -------
@@ -1516,7 +1524,7 @@ class OSOutput:
 
     def AreResultsAvailable(self):
         """
-        Check if analysis results are available or not.
+        Checks if analysis results are available or not.
 
         Returns
         -------
@@ -1546,7 +1554,7 @@ class OSOutput:
         Returns
         -------
         int
-            Returns Load Step value.
+            Load Step value.
 
 
         Example
@@ -1885,7 +1893,7 @@ class OSOutput:
         >>>
         >>> base_pressures_x, base_pressures_y, base_pressures_z = staad_obj.Output.GetBasePressures(load_cases[0], node_list)
         """
-        count = self._support.GetSupportCount()
+        count = len(nodelist)
         safe_x_base_pressure = make_safe_array_double(count)
         safe_y_base_pressure = make_safe_array_double(count)
         safe_z_base_pressure = make_safe_array_double(count)
@@ -2025,8 +2033,7 @@ class OSOutput:
     def GetResultantForceAlongLineForPlateList(
         self,
         plateList: list,
-        nplates: int,
-        loadIdList: list,
+        loadIdList: list | int,
         startNode: list,
         endNode: list,
         isTransformForceToGlobal: int,
@@ -2041,9 +2048,7 @@ class OSOutput:
         ----------
         plateList : list
             List of plates IDs. a) All plates in model, b) plates through which the cut line crosses (both would work but 'a' is computationally expensive)
-        nplates : int
-            No of plates in plateList
-        loadIdList : list
+        loadIdList : list of int or int
             The load cases for plate analysis
         startNode : list
             List of x, y, z values of the start node at indexes 0, 1 and 2.
@@ -2060,8 +2065,8 @@ class OSOutput:
 
         Returns
         -------
-        list
-            List of resultant forces consisting Fx, Fy, Fz, Mx, My, Mz (in same order).
+        list of tuples
+            List of tuples containing resultant forces and moments (Fx, Fy, Fz, Mx, My, Mz) for each load case in `loadIdList`.
 
         Example
         -------
@@ -2072,10 +2077,15 @@ class OSOutput:
         >>> load_cases = staad_obj.Load.GetPrimaryLoadCaseNumbers()
         >>> staad_obj.AnalyzeEx(1, 0, 1)
         >>>
-        >>> resultant_force_along_line_for_plate_list = staad_obj.Output.GetResultantForceAlongLineForPlateList(plate_list, len(plate_list), load_cases[0], [0, 15, 0], [0, 54, 60], 1, 1, 1, 1)
+        >>> resultant_force_along_line_for_plate_list = staad_obj.Output.GetResultantForceAlongLineForPlateList(plate_list, load_cases[0], [0, 15, 0], [0, 54, 60], 1, 1, 1, 1)
         """
-        result = [make_safe_array_double(6)]
-        ref_result = make_variant_vt_ref(result, automation.VT_ARRAY | automation.VT_R8)
+        nplates = len(plateList)
+        if isinstance(loadIdList, int):
+            loadIdList = [loadIdList]
+        force_result = make_two_dimensional_safe_array_double(len(loadIdList), 6)
+        ref_result = make_variant_vt_ref(
+            force_result, automation.VT_ARRAY | automation.VT_R8
+        )
         plate_list = make_safe_array_long_input(plateList)
         safe_loadIdList = make_safe_array_long_input(loadIdList)
         safe_startNode = make_safe_array_double_input(startNode)
@@ -2111,11 +2121,9 @@ class OSOutput:
     def GetResultantForceAlongLineForParametricSurface(
         self,
         parametricSurfaceName: str,
-        nplates: int,
-        loadId: int,
+        loadIdList: int,
         startNode: list,
         endNode: list,
-        facingNode: list,
         isTransformForceToGlobal: int,
         firstNode: int,
         secondNode: int,
@@ -2128,16 +2136,12 @@ class OSOutput:
         ----------
         parametricSurfaceName : str
             Name of the parametric surface.
-        nplates : int
-            Number of plates in plateList.
-        loadId : int
-            The load case for plate analysis.
+        loadIdList : list of int or int
+            The load cases for plate analysis.
         startNode : list
             List of x, y, z values of the start node at indexes 0, 1 and 2.
         endNode : list
             List of x, y, z values of the end node at indexes 0, 1 and 2.
-        facingNode : list
-            List of x, y, z values of the facing node at indexes 0, 1 and 2.
         isTransformForceToGlobal : int
             1: return force in Global System, 0: return forces in local system of cut line.
         firstNode : int
@@ -2149,8 +2153,8 @@ class OSOutput:
 
         Returns
         -------
-        list
-            List of resultant forces consisting Fx, Fy, Fz, Mx, My, Mz (in same order).
+        list of tuples
+            List of tuples containing resultant forces and moments (Fx, Fy, Fz, Mx, My, Mz) for each load case in `loadIdList`.
 
         Example
         -------
@@ -2159,33 +2163,34 @@ class OSOutput:
         >>> staad_obj = os_analytical.connect()
         >>>
         >>> surface_name = "WALL 1"
-        >>> plate_list = staad_obj.Geometry.GetPlateList()
         >>> load_cases = staad_obj.Load.GetPrimaryLoadCaseNumbers()
         >>> staad_obj.AnalyzeEx(1, 0, 1)
         >>>
-        >>> result = staad_obj.Output.GetResultantForceAlongLineForParametricSurface(surface_name, len(plate_list), load_cases[0], [0, 15, 0], [0, 54, 60], [0, 0, 1], 1, 1, 1, 1)
+        >>> result = staad_obj.Output.GetResultantForceAlongLineForParametricSurface(surface_name, load_cases, [0, 15, 0], [0, 54, 60], 1, 1, 1, 1)
         """
-        result = make_safe_array_double(6)
-        ref_result = make_variant_vt_ref(result, automation.VT_ARRAY | automation.VT_R8)
-        safe_startNode = make_safe_array_long_input(startNode)
-        safe_endNode = make_safe_array_long_input(endNode)
-        safe_facingNode = make_safe_array_long_input(facingNode)
+        if isinstance(loadIdList, int):
+            loadIdList = [loadIdList]
+        force_result = make_two_dimensional_safe_array_double(len(loadIdList), 6)
+        ref_result = make_variant_vt_ref(
+            force_result, automation.VT_ARRAY | automation.VT_R8
+        )
+        safe_loadIdList = make_safe_array_long_input(loadIdList)
+        safe_startNode = make_safe_array_double_input(startNode)
+        safe_endNode = make_safe_array_double_input(endNode)
+        vt_loadIdList = make_variant_vt_ref(
+            safe_loadIdList, automation.VT_ARRAY | automation.VT_I4
+        )
         vt_startNode = make_variant_vt_ref(
-            safe_startNode, automation.VT_ARRAY | automation.VT_I4
+            safe_startNode, automation.VT_ARRAY | automation.VT_R8
         )
         vt_endNode = make_variant_vt_ref(
-            safe_endNode, automation.VT_ARRAY | automation.VT_I4
-        )
-        vt_facingNode = make_variant_vt_ref(
-            safe_facingNode, automation.VT_ARRAY | automation.VT_I4
+            safe_endNode, automation.VT_ARRAY | automation.VT_R8
         )
         result = self._output.GetResultantForceAlongLineForParametricSurface(
             parametricSurfaceName,
-            nplates,
-            loadId,
+            vt_loadIdList,
             vt_startNode,
             vt_endNode,
-            vt_facingNode,
             isTransformForceToGlobal,
             firstNode,
             secondNode,
@@ -2197,7 +2202,7 @@ class OSOutput:
         return list(ref_result[0])
 
     def GetPlateStressAtPoint(
-        self, plateNo: int, loadNo: int, stressPoint: list, facingPoint: int
+        self, plateNo: int, loadNo: int, stressPoint: list, facingPoint: list
     ):
         """
         Get stresses values at a point on a specified plate.
@@ -2209,15 +2214,16 @@ class OSOutput:
         loadNo : int
             Load number for which stress is requested
         stressPoint : list
-            The coordinate at which the stress is required in global axes as an array size of 3 doubles. The values of  x, y, z values of the point defined in the array index (0), (1) and (2).
-        facingPoint : int
-            x, y, z values of the facing node at indexes 0, 1 and 2. API always expects an array size of 3 doubles.
-            Definition of facingPoint: It is the node which sits on the tip of a vector which is orthogonal to the vector stressPoint -> facingPoint and lies in the same plane as that of the plates through which the cut line passes.
+            List of three floats [x, y, z] giving the point coordinates in global axes for point where stress is requested.
+        facingPoint : list
+            List of three floats [x, y, z] giving the facing node coordinates in global axes.
+
+            Note: Definition of facingPoint: It is the node which sits on the tip of a vector which is orthogonal to the vector stressPoint -> facingPoint and lies in the same plane as that of the plates through which the cut line passes.
 
         Returns
         -------
         list
-            List of stresses values at a point on a specified plate containing following 32 values:
+            List of stresses values at a point on a specified plate containing following 32 values (in same order):
                 +-------------+------------------------+
                 | Array Index | stress Type            |
                 +=============+========================+
@@ -2292,7 +2298,6 @@ class OSOutput:
         >>>
         >>> staad_obj = os_analytical.connect()
         >>>
-        >>> surface_name = "WALL 1"
         >>> plate_list = staad_obj.Geometry.GetPlateList()
         >>> load_cases = staad_obj.Load.GetPrimaryLoadCaseNumbers()
         >>> staad_obj.AnalyzeEx(1, 0, 1)
@@ -2324,8 +2329,8 @@ class OSOutput:
 
         Returns
         -------
-        float
-            Time step used for the integration in seconds.
+        tuple
+            Tuple of time steps used for the integration in seconds and the number of time-step responses are computed.
 
         Example
         -------
@@ -2342,7 +2347,7 @@ class OSOutput:
         nsteps = self._output.GetTimeHistoryIntegrationStepInfo(ref_time_step)
         if nsteps < 0:
             raise_os_error_if_error_code(-1)
-        return float(ref_time_step[0]), nsteps
+        return (float(ref_time_step[0]), nsteps)
 
     def GetTimeHistoryResponseAtTime(
         self,
@@ -2395,8 +2400,8 @@ class OSOutput:
 
         Returns
         -------
-        list of float
-            List returning the responses at the integration steps. The size of the list is (no of integration steps), the first location is for the response at time = 0.0.
+        float
+            Time History Response value at specified time, of given type and DOF.
 
         Example
         -------
@@ -2404,10 +2409,10 @@ class OSOutput:
         >>>
         >>> staad_obj = os_analytical.connect()
         >>> node_list = staad_obj.Geometry.GetNodeList()
-        >>> load_cases = staad_obj.Load.GetPrimaryLoadCaseNumbers()
+        >>> load_case = 0 # Use 0 as per documentation for now
         >>> staad_obj.AnalyzeEx(1, 0, 1)
         >>>
-        >>> time_history_response_at_time = staad_obj.Output.GetTimeHistoryResponseAtTime(load_cases[0], node_list[0], 1, 1, 1.0)
+        >>> time_history_response_at_time = staad_obj.Output.GetTimeHistoryResponseAtTime(load_case, node_list[0], 1, 1, 1.0)
         """
         response = make_safe_array_double(1)
         ref_response = make_variant_vt_ref(response, automation.VT_R8)
@@ -2416,13 +2421,18 @@ class OSOutput:
         )
         if result < 0:
             raise_os_error_if_error_code(result)
-        return ref_response[0], result
+        if result == 0:
+            raise OsErrorBase(
+                "No time history response data available to determine min/max values.",
+                -1,
+            )
+        return ref_response[0]
 
     def GetTimeHistoryResponse(
         self, load_case: int, node_no: int, dof_no: int, response_type: int
     ):
         """
-        Gets the time-history responses of DOF at specified node in the VARIANT array responses
+        Gets the time-history response values at a specified node for each time step of given response type and degress of freedom.
 
         Parameters
         ----------
@@ -2448,7 +2458,7 @@ class OSOutput:
                 | Mz = 6 | DegreesOfFreedom.Mz |
                 +--------+---------------------+
         response_type : int
-            Response type, i.e., displacement, velocity, or acceleration defined in TimeHistoryResponseType enum:
+            Response type as defined in TimeHistoryResponseType enum:
                 +------------------+--------------------------------------+
                 | Value            | Response Type                        |
                 +==================+======================================+
@@ -2461,8 +2471,8 @@ class OSOutput:
 
         Returns
         -------
-        float
-            Response value.
+        list of float
+            Response values for the given DOF and response type at each time step.
 
         Example
         -------
@@ -2483,9 +2493,14 @@ class OSOutput:
         result = self._output.GetTimeHistoryResponse(
             load_case, node_no, dof_no, response_type, ref_response
         )
-        if result != 1:
+        if result < 0:
             raise_os_error_if_error_code(-1)
-        return ref_response[0]
+        if result == 0:
+            raise OsErrorBase(
+                "No time history response data available to determine min/max values.",
+                -1,
+            )
+        return list(ref_response[0])
 
     def GetTimeHistoryResponseMinMax(
         self, load_case: int, node_no: int, dof_no: int, response_type: int
@@ -2534,7 +2549,7 @@ class OSOutput:
         >>> node_list = staad_obj.Geometry.GetNodeList()
         >>> staad_obj.AnalyzeEx(1, 0, 1)
         >>>
-        >>> time_min_max = staad_obj.Output.GetTimeHistoryResponseMinMax(0, node_list[0], 1, 1)
+        >>> max_resp, max_resp_time, min_resp, min_resp_time = staad_obj.Output.GetTimeHistoryResponseMinMax(0, node_list[0], 1, 1)
         """
         response_max_val = make_safe_array_double(1)
         response_min_val = make_safe_array_double(1)
@@ -2575,7 +2590,7 @@ class OSOutput:
         Returns
         -------
         tuple
-            Tuple of steel design results containing the design code name, the design status (pass or fail will be returned), the design utilization ratio, the allowable design utilization ratio, the critical design load case number, the critical section location from the start of member in current base unit, the critical design clause, the design section name, array of size 3 and type double to hold critical section forces. returns fx, my and mz values at 0, 1, & 2 index respectively in current base units and kl/r ratio of the specified member. (in same order)
+            Tuple of steel design results containing the design code name, the design status (pass or fail will be returned), the design utilization ratio, the allowable design utilization ratio, the critical design load case number, the critical section location from the start of member in current base unit, the critical design clause, the design section name, list of critical sections forces - FX, MY & MZ in respective order and kl/r ratio of the specified member. (in same order)
 
         Example
         -------
@@ -2633,7 +2648,7 @@ class OSOutput:
             ref_criticalsection[0],
             criticalclause.value,
             designsection.value,
-            ref_designforce[0],
+            list(ref_designforce[0]),
             ref_klbyr[0],
         )
 
@@ -2696,7 +2711,7 @@ class OSOutput:
         Returns
         -------
         bool
-            returns true (for boolean variable, for long variable, return value is 1) if result extraction from multiple steel design block is possible (i.e. aisc 360-16 code is used). else the return value will be false (0 for long variable).
+            'true' if multiple steel design results are available, 'false' otherwise.
 
         Example
         -------
@@ -2707,7 +2722,8 @@ class OSOutput:
         >>>
         >>> is_multiple_member_steel_design_results_available = staad_obj.Output.IsMultipleMemberSteelDesignResultsAvailable()
         """
-        return bool(self._output.IsMultipleMemberSteelDesignResultsAvailable())
+        result = self._output.IsMultipleMemberSteelDesignResultsAvailable()
+        return bool(result)
 
     def GetSteelDesignParameterBlockCount(self):
         """
@@ -2716,7 +2732,7 @@ class OSOutput:
         Returns
         -------
         int
-            Returns the count of steel design parameter blocks.
+            The count of steel design parameter blocks.
 
         Example
         -------
@@ -2773,7 +2789,7 @@ class OSOutput:
         Returns
         -------
         float
-            Returns the critical steel design ratio.
+            The critical steel design ratio.
 
         Example
         -------
@@ -2875,7 +2891,7 @@ class OSOutput:
         Returns
         -------
         float
-            Returns the maximum critical steel design ratio.
+            The maximum critical steel design ratio.
 
         Example
         -------
@@ -2898,7 +2914,7 @@ class OSOutput:
         self, plateNo: int, loadCaseNo: int
     ):
         """
-        Get all plate center principal stresses and angles (extended).
+        Get all plate center principal stresses and angles of specified plate and load case.
 
         Parameters
         ----------
@@ -3018,14 +3034,14 @@ class OSOutput:
         ----------
         memberNo : int
             Physical Member number ID.
-        distance : int
+        distance : float
             Distance from the starting end of the member.
         loadCaseNo : int
             Load Case reference ID.
         Returns
         -------
         list
-            List of 6 elements consisting of Section axial force, Shear force in LOCAL Y & Z direction, Torsion and Bending moment in Local MY & MZ direction.
+            List of 6 elements consisting of Section axial force, Shear force in LOCAL Y & Z direction, Torsion and Bending moment in Local MX, MY & MZ direction.
 
         Example
         -------

@@ -2,12 +2,16 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+import comtypes.client as cc
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
+    make_empty_safe_array_long_input,
     make_safe_array_long_input,
     make_variant_vt_ref,
 )
-from comtypes import automation, CoInitialize
-import comtypes.client as cc
 from .oserrors import raise_os_error_if_error_code
 
 
@@ -110,16 +114,68 @@ class OSDesign:
         member_ids: list | int,
     ):
         """
-        Assign a design command to specified members in a design brief.
+        Creates and assigns a design command instruction for steel , timber, concrete and aluminum design.Assign a design command to specified members in a design brief.
 
         Parameters
         ----------
         design_ref_id : int
             Design brief reference ID.
         design_command_name : str
-            Name of the design command.
+            Design command string. Supported command names according to design command type are included in below table:
+                +---------------------+-----------------------+
+                | Design Command Type | Design Commands       |
+                +=====================+=======================+
+                | Steel Design        | "CHECK CODE"          |
+                +                     +-----------------------+
+                |                     | "FIXED GROUP"         |
+                +                     +-----------------------+
+                |                     | "GROUP"               |
+                +                     +-----------------------+
+                |                     | "MEMBER TAKE OFF"     |
+                +                     +-----------------------+
+                |                     | "SELECT"              |
+                +                     +-----------------------+
+                |                     | "SELECT OPTIMIZED"    |
+                +                     +-----------------------+
+                |                     | "TAKE OFF"            |
+                +                     +-----------------------+
+                |                     | "SELECT WELD"         |
+                +                     +-----------------------+
+                |                     | "SELECT WELD TRUSS"   |
+                +                     +-----------------------+
+                |                     | "TAKE OFF"            |
+                +---------------------+-----------------------+
+                | Aluminum Design     | "CHECK CODE"          |
+                +                     +-----------------------+
+                |                     | "SELECT"              |
+                +                     +-----------------------+
+                |                     | "TAKE OFF"            |
+                +---------------------+-----------------------+
+                | Concrete Design     | "DESIGN BEAM"         |
+                +                     +-----------------------+
+                |                     | "DESIGN COLUMN"       |
+                +                     +-----------------------+
+                |                     | "DESIGN SLAB/ELEMENT" |
+                +                     +-----------------------+
+                |                     | "TAKE OFF"            |
+                +---------------------+-----------------------+
+                | Timber Design       | "CHECK CODE"          |
+                +                     +-----------------------+
+                |                     | "SELECT"              |
+                +---------------------+-----------------------+
         design_command_value : str
-            Value for the design command.
+            Value for the design command. Only use in case "GROUP" command name else keep it empty string. In case of 'GROUP', the string must contain the index of the selected option from the table below:
+                +---------------+-------------------------+
+                | Command Value | Specification Parameter |
+                +===============+=========================+
+                |      "0"      |          None           |
+                +---------------+-------------------------+
+                |      "1"      |           Ax            |
+                +---------------+-------------------------+
+                |      "2"      |           Sy            |
+                +---------------+-------------------------+
+                |      "3"      |           Sz            |
+                +---------------+-------------------------+
         member_ids : list of int
             List of member numbers.
 
@@ -141,6 +197,9 @@ class OSDesign:
         members_variant = make_variant_vt_ref(
             safe_members, automation.VT_ARRAY | automation.VT_I4
         )
+        if len(member_ids) == 0:
+            safe_members = make_empty_safe_array_long_input()
+            members_variant = safe_members
         retVal = self._design.AssignDesignCommand(
             design_ref_id, design_command_name, design_command_value, members_variant
         )
@@ -224,7 +283,7 @@ class OSDesign:
         """
         return self._design.GetDesignBriefCode(design_ref_id)
 
-    def GetMemberDesignParameters(self, design_ref_id: int, member_no: int):  # noqa: C901
+    def GetMemberDesignParameters(self, design_ref_id: int, member_no: int):
         """
         Get the design parameters for a specified member in a design brief.
 

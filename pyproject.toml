@@ -34,7 +34,7 @@ classifiers = [
 
 # Runtime dependencies required by the package.
 dependencies = [
-    "comtypes",
+    "comtypes", "numpy"
 ]
 
 [project.optional-dependencies]
@@ -46,6 +46,11 @@ Homepage = "https://github.com/BentleySystems/openstaadpy"
 Repository = "https://github.com/BentleySystems/openstaadpy"
 
 # --- Tool-specific configurations ---
+
+# Ruff linter configuration.
+[tool.ruff.lint]
+select = ["E", "F", "FA", "I", "PIE808", "PYI041", "RUF013", "RUF022", "RUF100", "SIM201"]
+ignore = ["E501", "BLE001"]
 
 # Configuration for setuptools to find your package source code.
 [tool.setuptools.packages.find]

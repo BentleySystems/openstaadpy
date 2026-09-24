@@ -2,13 +2,16 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
     make_safe_array_double_input,
     make_safe_array_long_input,
     make_safe_array_string_input,
     make_variant_vt_ref,
 )
-from comtypes import automation, CoInitialize
 
 
 class OSCommand:

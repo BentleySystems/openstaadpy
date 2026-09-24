@@ -2,7 +2,11 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, COMError, automation, client
+
+from .openstaadhelper import (
     create_variant_int,
     make_safe_array_double,
     make_safe_array_long,
@@ -11,20 +15,17 @@ from .openStaadHelper import (
     make_variant_vt,
     make_variant_vt_ref,
 )
-from .osgeometry import OSGeometry
-from .osview import OSView
-from .ossupport import OSSupport
-from .osload import OSLoad
-from .osproperty import OSProperty
-from .osoutput import OSOutput
-from .ostable import OSTable
 from .oscommand import OSCommand
 from .osdesign import OSDesign
 from .oserrors import OsErrorBase, raise_os_error_if_error_code
-from .staadVersionHelper import compare_versions
-from comtypes import COMError, automation
-from comtypes import client
-from comtypes import CoInitialize
+from .osgeometry import OSGeometry
+from .osload import OSLoad
+from .osoutput import OSOutput
+from .osproperty import OSProperty
+from .ossupport import OSSupport
+from .ostable import OSTable
+from .osview import OSView
+from .staadversionhelper import compare_versions
 
 
 class _COMProxy:
@@ -231,7 +232,7 @@ class OSRoot:
         """
         self._staad.CloseSTAADFile()
 
-    def GetAnalysisStatus(self, modelPath: str = None):
+    def GetAnalysisStatus(self, modelPath: str | None = None):
         """
         Get analysis status for the open STAAD Model.
 
@@ -1062,7 +1063,7 @@ class OSRoot:
             comments_ref[0],
         ]
 
-    def GetAnalysisErrorMessages(self, modelPath: str = None):
+    def GetAnalysisErrorMessages(self, modelPath: str | None = None):
         """
         Get error messages from the analysis log file.
 
@@ -1111,7 +1112,7 @@ class OSRoot:
 
         return list(errors[0])
 
-    def GetAnalysisWarningMessages(self, modelPath: str = None):
+    def GetAnalysisWarningMessages(self, modelPath: str | None = None):
         """
         Get warning messages from the analysis ANL file.
 

@@ -39,3 +39,4 @@ Thumbs.db
 # Local development
 *.log
 *.bak
+*.vs

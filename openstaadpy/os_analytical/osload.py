@@ -2,8 +2,14 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
     create_variant_int,
+    make_empty_safe_array_string_input,
+    make_out_variant,
     make_safe_array_double,
     make_safe_array_double_input,
     make_safe_array_long,
@@ -11,9 +17,7 @@ from .openStaadHelper import (
     make_safe_array_string_input,
     make_variant_vt_ref,
 )
-from .oserrors import raise_os_error_if_error_code
-from comtypes import automation
-from comtypes import CoInitialize
+from .oserrors import OsErrorBase, raise_os_error_if_error_code
 
 
 class OSLoad:
@@ -76,7 +80,7 @@ class OSLoad:
             "AddWindDefinitionASCE7Parameters",
             "AddNotionalLoad",
             "AddDirectAnalysisDefinitionParameter",
-            "AddResponseSpectrumLoadEx",
+            "AddResponseSpectrumLoad",
             "AddAutoCombinationRepeat",
             "RemoveLoadCasesFromEnvelop",
             "RemoveAttribute",
@@ -157,6 +161,29 @@ class OSLoad:
             "GetLoadEnvelopeDetails",
             "GetLoadListfromLoadEnvelope",
             "GetEnvelopeIDs",
+            "DefineEnclosedZone",
+            "AddOpeningInEnclosedZone",
+            "IgnoreMembersForPanelFormationInEnclosedZone",
+            "IgnoreMembersForLoadTransferInEnclosedZone",
+            "AddEnclosedZoneLoad",
+            "GetEnclosedZoneCount",
+            "GetEnclosedZoneNames",
+            "GetEnclosedZoneBoundaryNodesCount",
+            "GetEnclosedZoneBoundaryNodeList",
+            "GetEnclosedZoneOpeningCount",
+            "GetEnclosedZoneOpeningNodeList",
+            "GetCountOfMembersIgnoredForPanelFormationInEnclosedZone",
+            "GetMembersIgnoredForPanelFormationInEnclosedZone",
+            "GetCountOfMembersIgnoredForLoadTransferInEnclosedZone",
+            "GetMembersIgnoredForLoadTransferInEnclosedZone",
+            "DeleteEnclosedZone",
+            "DeleteResponseSpectrumLoad",
+            "GetResponseSpectrumLoadCount",
+            "GetResponseSpectrumLoadList",
+            "GetResponseSpectrumLoadParamCount",
+            "GetResponseSpectrumDataArraySize",
+            "GetResponseSpectrumLoad",
+            "UpdateResponseSpectrumLoad",
         ]
 
         for function_name in self._functions:
@@ -1758,11 +1785,13 @@ class OSLoad:
              True if successful.
              False if unsucessful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefSelfWeight(1.0)
         """
-        return self._load.AddSeismicDefMemberWeight(varWeightFactor)
+        return self._load.AddSeismicDefSelfWeight(varWeightFactor)
 
     def AddSeismicDefMemberWeight(
         self,
@@ -1855,6 +1884,8 @@ class OSLoad:
              True if successful adds member concentrated/uniform weight to Seismic Definition.
              False if unsucessful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefMemberWeight(1, 2, 3.0, 4.0, 5.0, [6, 7, 8])
@@ -1880,6 +1911,8 @@ class OSLoad:
         bool
             True if successful, False otherwise.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefJointWeight(1.0, [1, 2, 3])
@@ -1907,6 +1940,8 @@ class OSLoad:
              True if successful.
              False if unsucessful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefElementWeight(1.0, [1, 2, 3])
@@ -1982,6 +2017,8 @@ class OSLoad:
              True if successful.
              False if unsucessful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefFloorWeight(0, 1, 2.0, 3, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
@@ -2015,6 +2052,8 @@ class OSLoad:
         bool
             True if successful.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicLoad(0, 1.0)
@@ -2045,6 +2084,8 @@ class OSLoad:
             Returns load case reference ID with which automatically load combination generation starts. If nStartLoadCaseNo is valid, auto load combinations will be created from the provided ID.
             IfnStartLoadCaseNo is invalid Load Case ID already present Load Case ID, load combinations would automatically generated from next available Load Case ID and nStartLoadCaseNo will be returned/updatedwith this ID.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddAutoLoadCombinations("AISC 9th Ed","2.3 LRFD General", [1, 2, 3])
@@ -2075,6 +2116,8 @@ class OSLoad:
         int
             Returns 1 if Load Case is added successfully, 0 otherwise.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddRepeatLoad([1, 2, 3], [1.0, 2.0, 3.0])
@@ -2102,6 +2145,8 @@ class OSLoad:
              Returns 1 if OK.
              Returns 0 if general error.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddLoadCasesToEnvelop(1, [1, 2, 3])
@@ -2127,6 +2172,8 @@ class OSLoad:
         int
             Reference load case number ID.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddReferenceLoad([1, 2, 3], [1.0, 2.0, 3.0])
@@ -2166,6 +2213,8 @@ class OSLoad:
         bool
             True if successful, False otherwise.
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddSeismicDefWallArea(15, "X", [10.0, 20.0])
@@ -2461,6 +2510,8 @@ class OSLoad:
         bool
             Returns True if succesful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddWindDefinitionASCE7Parameters(1, "ASCE7-10", 100.0, 10.0, 1, 1, 1, 1, [1.0, 2.0, 3.0], [1.0, 2.0, 3.0])
@@ -2552,6 +2603,8 @@ class OSLoad:
         bool
             return True if successful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddNotionalLoad([1, 2], [1.0, 1.2], [1, 2], [3], [0.8], [3])
@@ -2627,6 +2680,8 @@ class OSLoad:
             Returns TRUE if successful
             Returns FALSE if unsuccessful
 
+        Examples
+        --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Load.AddDirectAnalysisDefinitionParameter(0, [1, 2], 0.5)
@@ -2684,6 +2739,9 @@ class OSLoad:
             | 2       | IS:1893 2016        | TOR, DEC, ECC, X, Y, Z, ACC, DIS, SCA, DAM, CDA, MDA, LIN, LOG, MIS, ZPA, IGN, DOM, SIG, SAV, IMR, STA      | TR.32.10.1.8  |
             |         |                     | SOI, CHE, RF                                                                                                |               |
             +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
+            | 3       | IS:1893 Part 4 2015 | TOR, DEC, ECC, X, Y, Z, ACC, DIS, SCA, DAM, CDA, MDA, LIN, LOG, MIS, ZPA, IGN, DOM, SIG, SAV, IMR, STA      | TR.32.10.1.9  |
+            |         |                     | SOI, CHE, RF                                                                                                |               |
+            +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
             | 4       | ENV 1998-1:1994     | ELA, DES, X, Y, Z, ACC, DAM, CDA, MDA, LIN, LOG, MIS, ZPA, DOM, SIG, SAV, IMR, STA                          | TR.32.10.1.4  |
             |         |                     | SOI, ALP, Q                                                                                                 |               |
             +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
@@ -2699,6 +2757,9 @@ class OSLoad:
             | 8       | IBC 2015            | X, Y, Z, ACC, DAM, CDA, MDA, LIN, LOG, MISC, ZPA, DOM, SIG, SAV IMR, STA                                    | TR.32.10.1.12 |
             |         |                     | ZIP, LAT, LON, SS, S1, SCA, FA, FV, TL                                                                      |               |
             +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
+            | 9       | IBC 2018            | X, Y, Z, ACC, DAM, CDA, MDA, LIN, LOG, MISC, ZPA, DOM, SIG, SAV IMR, STA                                    | TR.32.10.1.13 |
+            |         |                     | ZIP, LAT, LON, SS, S1, SCA, FA, FV, TL                                                                      |               |
+            +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
             | 10      | SNiP II-7-81        | A, X, KWX, KX1, Y, KWY, KY1, Z, KWZ, KZ1, ACC, SCA, DAM, CDA, MDA, LIN, LOG, MIS, ZPA, DOM, SIG, SOI, SAV   | TR.32.10.1.14 |
             +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
             | 11      | SP 14.13330.2011    | ECC, A, X, Y, Z, ACC, SCA, DAM, LOG, MIS, ZPA, DOM, SIG, SOI                                                | TR.32.10.1.15 |
@@ -2708,6 +2769,9 @@ class OSLoad:
             | 13      | CANADIAN: NRC-2010  | TOR, DEC, ECC, X, Y, Z, ACC, DIS, SCA, DAM, CDA, MDA, LIN, LOG, MIS, ZPA, DOM, SIG, SAV, IMR, STA           | TR.32.10.1.3  |
             +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
             | 14      | GB 50011 2010       | X, Y, Z, ALP, DAM, CDA, MDA, LIN, LOG, MISS, ZPA, DOM, SIG, INT, FRE, FOR,RAR, GRO, SCL                     | TR.32.10.1.6  |
+            +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
+            | 15      | CANADIAN: NRC-2020  | TOR, DEC, ECC, X, Y, Z, ACC, DIS, SCA, DAM, CDA, MDA, LIN, LOG, MIS, ZPA, DOM, SIG, SAV, IMR, STA           | TR.32.10.1.4  |
+            |         |                     | SA1, SA2, SA3, SA4, SA5, SA6                                                                                |               |
             +---------+---------------------+-------------------------------------------------------------------------------------------------------------+---------------+
 
         - Following values should be specified for INT parameter of GB 50011 2010 code:
@@ -3141,8 +3205,6 @@ class OSLoad:
         bool
             True if OK
 
-        Example
-        -------
         Examples
         --------
         >>> from openstaadpy import os_analytical
@@ -4177,7 +4239,7 @@ class OSLoad:
             influenceAreaList,
         )
         beamToAreaInfluence = {}
-        for i in range(0, beamCount):
+        for i in range(beamCount):
             beamToAreaInfluence[beamIdList[0][i]] = influenceAreaList[0][i]
         return beamToAreaInfluence
 
@@ -4449,7 +4511,7 @@ class OSLoad:
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         UNILoads = []
-        for i in range(0, UNILoadCount):
+        for i in range(UNILoadCount):
             UNILoads.append(
                 (
                     varDirectionList[0][i],
@@ -4534,7 +4596,7 @@ class OSLoad:
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         TrapezodialLoads = []
-        for i in range(0, TrapezodialLoadCount):
+        for i in range(TrapezodialLoadCount):
             TrapezodialLoads.append(
                 (
                     varDirectionList[0][i],
@@ -4616,7 +4678,7 @@ class OSLoad:
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         ConcForces = []
-        for i in range(0, ConcForceCount):
+        for i in range(ConcForceCount):
             ConcForces.append(
                 (
                     varDirectionList[0][i],
@@ -4673,13 +4735,13 @@ class OSLoad:
         >>> staad_obj.Load.GetConcMoments(1)
         """
 
-        ConcForceCount = self._load.GetConcForceCount(nBeamNo)
-        if ConcForceCount < 0:
-            raise_os_error_if_error_code(ConcForceCount)
-        varDirection_safe_list = make_safe_array_long(ConcForceCount)
-        varMoment_safe_list = make_safe_array_double(ConcForceCount)
-        varD1_safe_list = make_safe_array_double(ConcForceCount)
-        varD2_safe_list = make_safe_array_double(ConcForceCount)
+        ConcMomentCount = self._load.GetConcMomentCount(nBeamNo)
+        if ConcMomentCount < 0:
+            raise_os_error_if_error_code(ConcMomentCount)
+        varDirection_safe_list = make_safe_array_long(ConcMomentCount)
+        varMoment_safe_list = make_safe_array_double(ConcMomentCount)
+        varD1_safe_list = make_safe_array_double(ConcMomentCount)
+        varD2_safe_list = make_safe_array_double(ConcMomentCount)
         varDirectionList = make_variant_vt_ref(
             varDirection_safe_list, automation.VT_ARRAY | automation.VT_I4
         )
@@ -4693,14 +4755,14 @@ class OSLoad:
             varD2_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        retVal = self._load.GetConcForces(
+        retVal = self._load.GetConcMoments(
             nBeamNo, varDirectionList, varMomentList, varD1List, varD2List
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
-        ConcForces = []
-        for i in range(0, ConcForceCount):
-            ConcForces.append(
+        ConcMoments = []
+        for i in range(ConcMomentCount):
+            ConcMoments.append(
                 (
                     varDirectionList[0][i],
                     varMomentList[0][i],
@@ -4708,7 +4770,7 @@ class OSLoad:
                     varD2List[0][i],
                 )
             )
-        return ConcForces
+        return ConcMoments
 
     def GetNoOfLoadAndFactorPairsForCombination(self, varLoadCombNo: int):
         """
@@ -4875,7 +4937,7 @@ class OSLoad:
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         PressureLoads = []
-        for i in range(0, PressureLoadCount):
+        for i in range(PressureLoadCount):
             PressureLoads.append(
                 (
                     varDirectionList[0][i],
@@ -4934,7 +4996,7 @@ class OSLoad:
         >>> staad_obj.Load.GetElementConcLoads(1)
         """
 
-        ConcentratedLoadCount = self.GetElementPressureLoadCount(varPlateNo)
+        ConcentratedLoadCount = self.GetElementConcLoadCount(varPlateNo)
         varDirection_safe_list = make_safe_array_long(ConcentratedLoadCount)
         varW1_safe_list = make_safe_array_double(ConcentratedLoadCount)
         varX1_safe_list = make_safe_array_double(ConcentratedLoadCount)
@@ -4958,7 +5020,7 @@ class OSLoad:
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         ConcentratedLoads = []
-        for i in range(0, ConcentratedLoadCount):
+        for i in range(ConcentratedLoadCount):
             ConcentratedLoads.append(
                 (
                     varDirectionList[0][i],
@@ -5194,7 +5256,7 @@ class OSLoad:
             raise_os_error_if_error_code(retVal)
 
         loadCaseToFactor = {}
-        for i in range(0, loadSizeCount):
+        for i in range(loadSizeCount):
             loadCaseToFactor[varLoadCaseList[0][i]] = varLoadFactorList[0][i]
 
         return loadCaseToFactor
@@ -5269,7 +5331,7 @@ class OSLoad:
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         LinearVaryingLoads = []
-        for i in range(0, LinearVaryingLoadCount):
+        for i in range(LinearVaryingLoadCount):
             LinearVaryingLoads.append(
                 (
                     varDirectionList[0][i],
@@ -5654,13 +5716,13 @@ class OSLoad:
             Factor_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
 
-        retVal = self._load.GetElementLoadInfo(
-            notionalloadCount, LoadCaseList, FactorList, DirectionList
+        retVal = self._load.GetNotionalLoadByIndex(
+            nIndex, LoadCaseList, FactorList, DirectionList
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         Loads = []
-        for i in range(0, notionalloadCount):
+        for i in range(notionalloadCount):
             Loads.append((DirectionList[0][i], LoadCaseList[0][i], FactorList[0][i]))
         return Loads
 
@@ -5911,4 +5973,1232 @@ class OSLoad:
         retVal = self._load.GetEnvelopeIDs(EnvelopeIdList)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        return retVal
+
+    # ENCLOSED ZONE FUNCTIONS
+
+    def DefineEnclosedZone(self, zoneName: str, boundaryNodeNos: list):
+        """
+        Defines an enclosed zone with the specified boundary nodes.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone (will be uppercased internally).
+        boundaryNodeNos : list of int
+            List of node IDs forming the closed boundary of the zone (minimum 3 nodes).
+
+        Returns
+        -------
+        bool
+            True if the enclosed zone was defined successfully.
+
+        See Also
+        --------
+        GetEnclosedZoneCount : Get the number of defined enclosed zones.
+        GetEnclosedZoneNames : Get the names of all enclosed zones.
+        GetEnclosedZoneBoundaryNodeList : Retrieve boundary nodes of a zone.
+        AddOpeningInEnclosedZone : Add an opening to the zone.
+        AddEnclosedZoneLoad : Apply a load to the zone.
+        DeleteEnclosedZone : Remove the zone from the model.
+        OSGeometry.GetFloorLevels : Identify floor levels for zone placement.
+        OSGeometry.GetFloorNodesAtLevel : Get coplanar nodes for boundary definition.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.DefineEnclosedZone("ZONE1", [1, 2, 3, 4])
+        >>> print(result)
+        """
+        safe_nodes = make_safe_array_long_input(boundaryNodeNos)
+        retval = self._load.DefineEnclosedZone(zoneName, safe_nodes)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval == 0
+
+    def AddOpeningInEnclosedZone(self, zoneName: str, openingNodeNos: list):
+        """
+        Adds an opening to an existing enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+        openingNodeNos : list of int
+            List of node IDs forming the opening boundary (minimum 3 nodes).
+
+        Returns
+        -------
+        bool
+            True if the opening was added successfully.
+
+        See Also
+        --------
+        DefineEnclosedZone : Define the enclosed zone before adding openings.
+        GetEnclosedZoneOpeningCount : Get the number of openings in a zone.
+        GetEnclosedZoneOpeningNodeList : Retrieve opening node IDs by index.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.AddOpeningInEnclosedZone("ZONE1", [5, 6, 7])
+        >>> print(result)
+        """
+        safe_nodes = make_safe_array_long_input(openingNodeNos)
+        retval = self._load.AddOpeningInEnclosedZone(zoneName, safe_nodes)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval == 0
+
+    def IgnoreMembersForPanelFormationInEnclosedZone(
+        self, zoneName: str, memberNos: list
+    ):
+        """
+        Specifies members to ignore during panel formation in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+        memberNos : list of int
+            List of member/beam IDs to ignore for panel formation.
+
+        Returns
+        -------
+        bool
+            True if successful.
+
+        See Also
+        --------
+        DefineEnclosedZone : Define the zone before ignoring members.
+        GetCountOfMembersIgnoredForPanelFormationInEnclosedZone : Get count of ignored members.
+        GetMembersIgnoredForPanelFormationInEnclosedZone : Get list of ignored member IDs.
+        IgnoreMembersForLoadTransferInEnclosedZone : Ignore members for load transfer instead.
+        OSGeometry.GetFloorBeamsAtLevel : Identify beams at a floor level.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.IgnoreMembersForPanelFormationInEnclosedZone("ZONE1", [1, 2])
+        >>> print(result)
+        """
+        safe_members = make_safe_array_long_input(memberNos)
+        retval = self._load.IgnoreMembersForPanelFormationInEnclosedZone(
+            zoneName, safe_members
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval == 0
+
+    def IgnoreMembersForLoadTransferInEnclosedZone(
+        self, zoneName: str, memberNos: list
+    ):
+        """
+        Specifies members to ignore during load transfer in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+        memberNos : list of int
+            List of member/beam IDs to ignore for load transfer.
+
+        Returns
+        -------
+        bool
+            True if successful.
+
+        See Also
+        --------
+        DefineEnclosedZone : Define the zone before ignoring members.
+        GetCountOfMembersIgnoredForLoadTransferInEnclosedZone : Get count of ignored members.
+        GetMembersIgnoredForLoadTransferInEnclosedZone : Get list of ignored member IDs.
+        IgnoreMembersForPanelFormationInEnclosedZone : Ignore members for panel formation instead.
+        OSGeometry.GetFloorBeamsAtLevel : Identify beams at a floor level.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.IgnoreMembersForLoadTransferInEnclosedZone("ZONE1", [3, 4])
+        >>> print(result)
+        """
+        safe_members = make_safe_array_long_input(memberNos)
+        retval = self._load.IgnoreMembersForLoadTransferInEnclosedZone(
+            zoneName, safe_members
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval == 0
+
+    def AddEnclosedZoneLoad(self, zoneName: str, loadDirection: int, loadValue: float):
+        """
+        Adds a load to an enclosed zone in the currently active load case.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+        loadDirection : int
+            Load direction:
+                +-------+-----------+
+                | Value | Direction |
+                +=======+===========+
+                | 3     | Local Z   |
+                +-------+-----------+
+                | 4     | Global X  |
+                +-------+-----------+
+                | 5     | Global Y  |
+                +-------+-----------+
+                | 6     | Global Z  |
+                +-------+-----------+
+        loadValue : float
+            Magnitude of the load in current input units.
+
+        Returns
+        -------
+        bool
+            True if the load was added successfully.
+
+        See Also
+        --------
+        DefineEnclosedZone : Define the zone before applying loads.
+        SetLoadActive : Activate a load case before adding zone loads.
+        GetEnclosedZoneNames : Verify zone name exists before loading.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.AddEnclosedZoneLoad("ZONE1", 5, -10.0)
+        >>> print(result)
+        """
+        retval = self._load.AddEnclosedZoneLoad(zoneName, loadDirection, loadValue)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval == 0
+
+    def GetEnclosedZoneCount(self):
+        """
+        Get the number of enclosed zones defined in the model.
+
+        Returns
+        -------
+        int
+            Number of enclosed zones.
+
+        See Also
+        --------
+        GetEnclosedZoneNames : Get zone names after retrieving count.
+        DefineEnclosedZone : Define a new enclosed zone.
+        DeleteEnclosedZone : Remove an enclosed zone.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> count = staad_obj.Load.GetEnclosedZoneCount()
+        >>> print(count)
+        """
+        retval = self._load.GetEnclosedZoneCount()
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval
+
+    def GetEnclosedZoneNames(self):
+        """
+        Get the names of all enclosed zones defined in the model.
+
+        Returns
+        -------
+        list of str
+            List of enclosed zone names.
+
+        See Also
+        --------
+        GetEnclosedZoneCount : Get the total number of zones.
+        DefineEnclosedZone : Define a new enclosed zone.
+        GetEnclosedZoneBoundaryNodeList : Get boundary nodes for a specific zone.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> names = staad_obj.Load.GetEnclosedZoneNames()
+        >>> print(names)
+        """
+        count = self.GetEnclosedZoneCount()
+        if count <= 0:
+            return []
+        out_var, result_var = make_out_variant()
+        retval = self._load.GetEnclosedZoneNames(out_var)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return list(result_var.value)
+
+    def GetEnclosedZoneBoundaryNodesCount(self, zoneName: str):
+        """
+        Get the number of boundary nodes in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        int
+            Number of boundary nodes.
+
+        See Also
+        --------
+        GetEnclosedZoneBoundaryNodeList : Get the actual boundary node IDs.
+        DefineEnclosedZone : Define boundary nodes when creating a zone.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> count = staad_obj.Load.GetEnclosedZoneBoundaryNodesCount("ZONE1")
+        >>> print(count)
+        """
+        retval = self._load.GetEnclosedZoneBoundaryNodesCount(zoneName)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval
+
+    def GetEnclosedZoneBoundaryNodeList(self, zoneName: str):
+        """
+        Get the list of boundary node IDs for an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        list of int
+            List of boundary node IDs.
+
+        See Also
+        --------
+        GetEnclosedZoneBoundaryNodesCount : Get the boundary node count first.
+        DefineEnclosedZone : Define boundary nodes when creating a zone.
+        OSGeometry.GetFloorNodesAtLevel : Get coplanar nodes at a floor level.
+        OSGeometry.GetFloorLevels : Identify available floor levels.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> nodes = staad_obj.Load.GetEnclosedZoneBoundaryNodeList("ZONE1")
+        >>> print(nodes)
+        """
+        count = self.GetEnclosedZoneBoundaryNodesCount(zoneName)
+        if count <= 0:
+            return []
+        out_var, result_var = make_out_variant()
+        retval = self._load.GetEnclosedZoneBoundaryNodeList(zoneName, out_var)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return list(result_var.value)
+
+    def GetEnclosedZoneOpeningCount(self, zoneName: str):
+        """
+        Get the number of openings in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        int
+            Number of openings.
+
+        See Also
+        --------
+        AddOpeningInEnclosedZone : Add an opening to a zone.
+        GetEnclosedZoneOpeningNodeList : Get node IDs for a specific opening.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> count = staad_obj.Load.GetEnclosedZoneOpeningCount("ZONE1")
+        >>> print(count)
+        """
+        retval = self._load.GetEnclosedZoneOpeningCount(zoneName)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval
+
+    def GetEnclosedZoneOpeningNodeList(self, zoneName: str, openingIdx: int):
+        """
+        Get the list of node IDs for a specific opening in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+        openingIdx : int
+            0-based index of the opening.
+
+        Returns
+        -------
+        list of int
+            List of node IDs forming the opening boundary.
+
+        See Also
+        --------
+        AddOpeningInEnclosedZone : Add an opening to a zone.
+        GetEnclosedZoneOpeningCount : Get number of openings to determine valid indices.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> nodes = staad_obj.Load.GetEnclosedZoneOpeningNodeList("ZONE1", 0)
+        >>> print(nodes)
+        """
+        out_var, result_var = make_out_variant()
+        retval = self._load.GetEnclosedZoneOpeningNodeList(
+            zoneName, openingIdx, out_var
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        if retval == 0:
+            return []
+        return list(result_var.value)
+
+    def GetCountOfMembersIgnoredForPanelFormationInEnclosedZone(self, zoneName: str):
+        """
+        Get the count of members ignored for panel formation in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        int
+            Number of members ignored for panel formation.
+
+        See Also
+        --------
+        IgnoreMembersForPanelFormationInEnclosedZone : Set members to ignore.
+        GetMembersIgnoredForPanelFormationInEnclosedZone : Get the actual member IDs.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> count = staad_obj.Load.GetCountOfMembersIgnoredForPanelFormationInEnclosedZone("ZONE1")
+        >>> print(count)
+        """
+        retval = self._load.GetCountOfMembersIgnoredForPanelFormationInEnclosedZone(
+            zoneName
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval
+
+    def GetMembersIgnoredForPanelFormationInEnclosedZone(self, zoneName: str):
+        """
+        Get the list of member IDs ignored for panel formation in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        list of int
+            List of member IDs ignored for panel formation.
+
+        See Also
+        --------
+        IgnoreMembersForPanelFormationInEnclosedZone : Set members to ignore.
+        GetCountOfMembersIgnoredForPanelFormationInEnclosedZone : Get count first.
+        OSGeometry.GetFloorBeamsAtLevel : Identify beams at a floor level.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> members = staad_obj.Load.GetMembersIgnoredForPanelFormationInEnclosedZone("ZONE1")
+        >>> print(members)
+        """
+        count = self.GetCountOfMembersIgnoredForPanelFormationInEnclosedZone(zoneName)
+        if count <= 0:
+            return []
+        out_var, result_var = make_out_variant()
+        retval = self._load.GetMembersIgnoredForPanelFormationInEnclosedZone(
+            zoneName, out_var
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return list(result_var.value)
+
+    def GetCountOfMembersIgnoredForLoadTransferInEnclosedZone(self, zoneName: str):
+        """
+        Get the count of members ignored for load transfer in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        int
+            Number of members ignored for load transfer.
+
+        See Also
+        --------
+        IgnoreMembersForLoadTransferInEnclosedZone : Set members to ignore.
+        GetMembersIgnoredForLoadTransferInEnclosedZone : Get the actual member IDs.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> count = staad_obj.Load.GetCountOfMembersIgnoredForLoadTransferInEnclosedZone("ZONE1")
+        >>> print(count)
+        """
+        retval = self._load.GetCountOfMembersIgnoredForLoadTransferInEnclosedZone(
+            zoneName
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval
+
+    def GetMembersIgnoredForLoadTransferInEnclosedZone(self, zoneName: str):
+        """
+        Get the list of member IDs ignored for load transfer in an enclosed zone.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone.
+
+        Returns
+        -------
+        list of int
+            List of member IDs ignored for load transfer.
+
+        See Also
+        --------
+        IgnoreMembersForLoadTransferInEnclosedZone : Set members to ignore.
+        GetCountOfMembersIgnoredForLoadTransferInEnclosedZone : Get count first.
+        OSGeometry.GetFloorBeamsAtLevel : Identify beams at a floor level.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> members = staad_obj.Load.GetMembersIgnoredForLoadTransferInEnclosedZone("ZONE1")
+        >>> print(members)
+        """
+        count = self.GetCountOfMembersIgnoredForLoadTransferInEnclosedZone(zoneName)
+        if count <= 0:
+            return []
+        out_var, result_var = make_out_variant()
+        retval = self._load.GetMembersIgnoredForLoadTransferInEnclosedZone(
+            zoneName, out_var
+        )
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return list(result_var.value)
+
+    def DeleteEnclosedZone(self, zoneName: str):
+        """
+        Deletes an enclosed zone from the model.
+
+        Parameters
+        ----------
+        zoneName : str
+            Name of the enclosed zone to delete.
+
+        Returns
+        -------
+        bool
+            True if the enclosed zone was deleted successfully.
+
+        See Also
+        --------
+        DefineEnclosedZone : Define a new enclosed zone.
+        GetEnclosedZoneCount : Verify zone count after deletion.
+        GetEnclosedZoneNames : Verify zone no longer listed.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.DeleteEnclosedZone("ZONE1")
+        >>> print(result)
+        """
+        retval = self._load.DeleteEnclosedZone(zoneName)
+        if retval < 0:
+            raise_os_error_if_error_code(retval)
+        return retval == 0
+
+    def DeleteResponseSpectrumLoad(self, loadCaseNumber: int, loadId: int):
+        """
+        Deletes specific Response Spectrum Load from the load case.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+        loadId : int
+            The Id of Response Spectrum load from the loadCaseNumber mentioned, starts from 1.
+
+        Returns
+        -------
+        bool
+            True if the response spectrum load was deleted successfully.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.DeleteResponseSpectrumLoad(4, 1)
+        >>> print(result)
+        """
+        retVal = self._load.DeleteResponseSpectrumLoad(loadCaseNumber, loadId)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal == 0
+
+    def GetResponseSpectrumLoadCount(self, loadCaseNumber: int):
+        """
+        Get the count of Response Spectrum Loads in the load case.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+
+        Returns
+        -------
+        int
+            Count of Response Spectrum Loads found in an load case.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.GetResponseSpectrumLoadCount(4)
+        >>> print(result)
+        """
+        retVal = self._load.GetResponseSpectrumLoadCount(loadCaseNumber)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
+
+    def GetResponseSpectrumLoadList(self, loadCaseNumber: int):
+        """
+        Get the list of Response Spectrum Load Ids in the load case.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+
+        Returns
+        -------
+        list of int
+            List of response load Ids present in given load case.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.GetResponseSpectrumLoadList(4)
+        >>> print(result)
+        """
+        rsLoadCount = self._load.GetResponseSpectrumLoadCount(loadCaseNumber)
+        rs_load_list_safe_list = make_safe_array_long(rsLoadCount)
+        rsLoadIdList = make_variant_vt_ref(
+            rs_load_list_safe_list, automation.VT_ARRAY | automation.VT_I4
+        )
+        retVal = self._load.GetResponseSpectrumLoadList(loadCaseNumber, rsLoadIdList)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return list(rs_load_list_safe_list[0])
+
+    def GetResponseSpectrumLoadParamCount(self, loadCaseNumber: int, loadId: int):
+        """
+        Gets default parameter count for a Response Spectrum load based on the code selected for the load.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+        loadId : int
+            The Id of Response Spectrum load from the loadCaseNumber mentioned, starts from 1.
+
+        Returns
+        -------
+        int
+            Count of default parameters of a Response Spectrum Load based on code type.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.GetResponseSpectrumLoadParamCount(4, 1)
+        >>> print(result)
+        """
+        retVal = self._load.GetResponseSpectrumLoadParamCount(loadCaseNumber, loadId)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
+
+    def GetResponseSpectrumDataArraySize(self, loadCaseNumber: int, loadId: int):
+        """
+        Gets Response Spectrum load item spectral data list size of the specified load case and response load ID.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+        loadId : int
+            The Id of Response Spectrum load from the loadCaseNumber mentioned, starts from 1.
+
+        Returns
+        -------
+        int
+            Size of spectral data array found in the Response Spectrum Load.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> result = staad_obj.Load.GetResponseSpectrumDataArraySize(4, 1)
+        >>> print(result)
+        """
+        retVal = self._load.GetResponseSpectrumDataArraySize(loadCaseNumber, loadId)
+        if retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return retVal
+
+    def GetResponseSpectrumLoad(
+        self, loadCaseNumber: int, loadId: int, parameterList: list = []
+    ):
+        """
+        Gets Response Spectrum load item details of the specified load case and response load ID. All data will be returned if an empty parameterList passed else only data requested in parameterList will be returned.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+        loadId : int
+
+            The Id of Response Spectrum load from the loadCaseNumber mentioned, starts from 1.
+        parameterList: list of str
+            Parameter List for which values are requested. If left empty, all parameters values will be returned.
+
+        Returns
+        -------
+        tuple
+            Tuple consisting of list of parameter values and list of pairs of time period and acceleration data. Spectral period-accerleration list will be empty if response spectrum data pairs are not present in the load item.
+
+            The Parameter values will be arranged in following order:
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | Code No.| Seismic Code        | Valid Parameters and return Values Order                                                                                                                                                              | Parameter Count | Ref. Sec.     |
+                +=========+=====================+=======================================================================================================================================================================================================+=================+===============+
+                | 0       | Generic or Custom   | CODE, COMB, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, FF1, FF1V, FF2, FF2V, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA                      | 35              | TR.32.10.1.1  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 1       | IS:1893 Part 1 2002 | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, MIS, MISV, ZPA, ZPAV, IGN, IGNV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, RF                             | 34              | TR.32.10.1.8  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 2       | IS:1893 2016        | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, zv, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, IGN, IGNV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, RF                   | 36              | TR.32.10.1.9  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 3       | IS:1893 Part 4 2015 | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, MLF, IGN, IGNV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, RF              | 37              | TR.32.10.1.10 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 4       | ENV 1998-1:1994     | CODE, COMB, ELA, DES, X, XV, Y, YV, Z, ZV, ACC, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, ALP, Q                                         | 32              | TR.32.10.1.5  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 5       | ENV 1998-1:2004     | CODE, COMB, ELA, DES, RS1, RS2, X, XV, Y, YV, Z, ZV, ACC, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, ALP, Q                               | 34              | TR.32.10.1.6  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 6       | IBC 2006            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | 39              | TR.32.10.1.11 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 7       | IBC 2012            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | 39              | TR.32.10.1.12 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 8       | IBC 2015            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | 39              | TR.32.10.1.13 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 9       | IBC 2018            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | 39              | TR.32.10.1.14 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 10      | SNiP II-7-81        | CODE, COMB, A, X, XV, KWX, KWXV, KX1, KX1V, Y, YV, KWY, KWYV, KY1, KY1V, Z, ZV, KWZ, KWZV, KZ1, KZ1V, ACC, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SOI, SAV | 39              | TR.32.10.1.15 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 11      | SP 14.13330.2011    | CODE, COMB, ECC, A, X, XV, Y, YV, Z, ZV, ACC, SCA, DAM, DAMV, CDA, MDA, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SOI                                                                        | 26              | TR.32.10.1.16 |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 12      | CANADIAN: NRC-2005  | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA                                       | 32              | TR.32.10.1.2  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 13      | CANADIAN: NRC-2010  | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA                                       | 32              | TR.32.10.1.3  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 14      | GB 50011 2010       | CODE, COMB, X, XV, Y, YV, Z, ZV, ALP, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, INT, FRE, FOR, RAR, GRO, SCL                                  | 33              | TR.32.10.1.7  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+                | 15      | CANADIAN: NRC-2020  | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SA1, SA2, SA3, SA4, SA5, SA6         | 38              | TR.32.10.1.4  |
+                +---------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------+---------------+
+
+            Parameter To Keywork Mapping Table:
+                +---------------------------------------------------------------------------------------+---------+
+                | Parameter                                                                             | Keyword |
+                +=======================================================================================+=========+
+                | Code Type                                                                             | CODE    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Combination Method                                                                    | COMB    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Zoning Factor                                                                         | A       |
+                +---------------------------------------------------------------------------------------+---------+
+                | LoadType: Elastic                                                                     | ELA     |
+                +---------------------------------------------------------------------------------------+---------+
+                | LoadType: Des                                                                         | DES     |
+                +---------------------------------------------------------------------------------------+---------+
+                | LoadType: Type I                                                                      | RS1     |
+                +---------------------------------------------------------------------------------------+---------+
+                | LoadType: Type 2                                                                      | RS2     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Use Torsion                                                                           | TOR     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Dynamic Eccentricity                                                                  | DEC     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Accidental Eccentricity                                                               | ECC     |
+                +---------------------------------------------------------------------------------------+---------+
+                | X Activated                                                                           | X       |
+                +---------------------------------------------------------------------------------------+---------+
+                | X Value                                                                               | XV      |
+                +---------------------------------------------------------------------------------------+---------+
+                | Y Activated                                                                           | Y       |
+                +---------------------------------------------------------------------------------------+---------+
+                | Y Value                                                                               | YV      |
+                +---------------------------------------------------------------------------------------+---------+
+                | Z Activated                                                                           | Z       |
+                +---------------------------------------------------------------------------------------+---------+
+                | Z Value                                                                               | ZV      |
+                +---------------------------------------------------------------------------------------+---------+
+                | KWX Activated                                                                         | KWX     |
+                +---------------------------------------------------------------------------------------+---------+
+                | KWX Value                                                                             | KWXV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | KX1 Activated                                                                         | KX1     |
+                +---------------------------------------------------------------------------------------+---------+
+                | KX1 Value                                                                             | KX1V    |
+                +---------------------------------------------------------------------------------------+---------+
+                | KWY Activated                                                                         | KWY     |
+                +---------------------------------------------------------------------------------------+---------+
+                | KWY Value                                                                             | KWYV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | KY1 Activated                                                                         | KY1     |
+                +---------------------------------------------------------------------------------------+---------+
+                | KY1 Value                                                                             | KY1V    |
+                +---------------------------------------------------------------------------------------+---------+
+                | KWZ Activated                                                                         | KWZ     |
+                +---------------------------------------------------------------------------------------+---------+
+                | KWZ Value                                                                             | KWZV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | KZ1 Activated                                                                         | KZ1     |
+                +---------------------------------------------------------------------------------------+---------+
+                | KZ1 Value                                                                             | KZ1V    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Spectrum Type: Acceleration                                                           | ACC     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Spectrum Type: Displacement                                                           | DIS     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Scale                                                                                 | SCA     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Damping Type: Damping                                                                 | DAM     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Damping Value                                                                         | DAMV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Damping Type: CDAMP                                                                   | CDA     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Damping Type: MDAMP                                                                   | MDA     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Interpolation Type : Linear                                                           | LIN     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Interpolation Type : Logarithmic                                                      | LOG     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Missing Mass  Activated                                                               | MIS     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Missing Mass Value                                                                    | MISV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | ZPA Activated                                                                         | ZPA     |
+                +---------------------------------------------------------------------------------------+---------+
+                | ZPA Value                                                                             | ZPAV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Minimum Lateral Force (% of Seismic Weight)                                           | MLF     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Ignore modes with Mass Participation (IGN) Activated                                  | IGN     |
+                +---------------------------------------------------------------------------------------+---------+
+                | IGN Value                                                                             | IGNV    |
+                +---------------------------------------------------------------------------------------+---------+
+                | FF1                                                                                   | FF1     |
+                +---------------------------------------------------------------------------------------+---------+
+                | FF1 Value                                                                             | FF1V    |
+                +---------------------------------------------------------------------------------------+---------+
+                | FF2                                                                                   | FF2     |
+                +---------------------------------------------------------------------------------------+---------+
+                | FF2 Value                                                                             | FF2V    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Signed Response Spectrum Result Options : Dominant                                    | DOM     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Signed Response Spectrum Result Options : Unsigned                                    | USIGN   |
+                +---------------------------------------------------------------------------------------+---------+
+                | Signed Response Spectrum Result Options : Signed                                      | SIGN    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Signed Response Spectrum Result Options (Dominant): Mode No                           | MODN    |
+                +---------------------------------------------------------------------------------------+---------+
+                | SAVE                                                                                  | SAV     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Individual Modal Response Load Case Generation Options: Generate load case for first  | IMR     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Individual Modal Response Load Case Generation Options: Modes                         | MODE    |
+                +---------------------------------------------------------------------------------------+---------+
+                | Individual Modal Response Load Case Generation Options: Starting Load Case            | STA     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Subsoil Class                                                                         | SOI     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Design Ground Acc.                                                                    | ALP     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Behaviour Factor                                                                      | Q       |
+                +---------------------------------------------------------------------------------------+---------+
+                | Latitude                                                                              | LAT     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Longitude                                                                             | LOG     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Mapped MCE for 0.2s spectral response acceleration                                    | SS      |
+                +---------------------------------------------------------------------------------------+---------+
+                | Mapped MCE spectral response acceleration at a period of 1 second                     | S1      |
+                +---------------------------------------------------------------------------------------+---------+
+                | ZIP Code                                                                              | ZIP     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Site Class                                                                            | SCL     |
+                +---------------------------------------------------------------------------------------+---------+
+                | Fa                                                                                    | FA      |
+                +---------------------------------------------------------------------------------------+---------+
+                | Fv                                                                                    | FV      |
+                +---------------------------------------------------------------------------------------+---------+
+                | Long Period                                                                           | TL      |
+                +---------------------------------------------------------------------------------------+---------+
+
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> parameterValueList, spectralData = staad_obj.Load.GetResponseSpectrumLoad(4, 1)
+        >>> parameterValueList1, spectralData1 = staad_obj.Load.GetResponseSpectrumLoad(5, 1, ["CODE", "COMB", "X", "XV"])
+        """
+        paramCount = len(parameterList)
+        spectralDataArraySize = 0
+        rs_param_safe_list = make_safe_array_string_input(parameterList)
+        if len(parameterList) == 0:
+            paramCount = self._load.GetResponseSpectrumLoadParamCount(
+                loadCaseNumber, loadId
+            )
+            spectralDataArraySize = self._load.GetResponseSpectrumDataArraySize(
+                loadCaseNumber, loadId
+            )
+            rs_param_safe_list = make_empty_safe_array_string_input()
+        rs_param_value_safe_list = make_safe_array_double(paramCount)
+        rsParamValueList = make_variant_vt_ref(
+            rs_param_value_safe_list, automation.VT_ARRAY | automation.VT_R8
+        )
+        rs_spectral_data_safe_list = make_safe_array_double(spectralDataArraySize)
+        rsSpectralDataList = make_variant_vt_ref(
+            rs_spectral_data_safe_list, automation.VT_ARRAY | automation.VT_R8
+        )
+
+        retVal = self._load.GetResponseSpectrumLoad(
+            loadCaseNumber,
+            loadId,
+            rs_param_safe_list,
+            rsParamValueList,
+            rsSpectralDataList,
+        )
+        if not retVal:
+            raise OsErrorBase(
+                "API failed in fetching Response Spectrum Load Details", -1
+            )
+        return (list(rsParamValueList[0]), list(rs_spectral_data_safe_list[0]))
+
+    def UpdateResponseSpectrumLoad(
+        self,
+        loadCaseNumber: int,
+        loadId: int,
+        paramToValueMap: dict = {},
+        spectralData: dict = {},
+    ):
+        """
+        Updates Response Spectrum load item data of the specified load case and response load ID.
+
+        Parameters
+        ----------
+        loadCaseNumber : int
+            The load case number.
+        loadId : int
+            The Id of Response Spectrum load from the loadCaseNumber mentioned, starts from 1.
+        paramToValueMap: dict (str, double)
+            Parameter To Value dictionary consisiting of parameter keyword to new updated value.
+        spectralData: dict (double, double)
+            Time To Spectral Response Value dictionary consisting updated spectral data values.
+
+            The valid parameter keywords to update depend on the seismic code applied to the response spectrum load:
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | Code No. | Seismic Code        | Valid Parameters to Update                                                                                                                                                                            | Ref. Sec.     |
+                +==========+=====================+=======================================================================================================================================================================================================+===============+
+                | 0        | Generic or Custom   | CODE, COMB, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, FF1, FF1V, FF2, FF2V, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA                      | TR.32.10.1.1  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 1        | IS:1893 Part 1 2002 | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, MIS, MISV, ZPA, ZPAV, IGN, IGNV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, RF                             | TR.32.10.1.8  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 2        | IS:1893 2016        | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, IGN, IGNV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, RF                   | TR.32.10.1.9  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 3        | IS:1893 Part 4 2015 | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, MLF, IGN, IGNV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, RF              | TR.32.10.1.10 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 4        | ENV 1998-1:1994     | CODE, COMB, ELA, DES, X, XV, Y, YV, Z, ZV, ACC, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, ALP, Q                                         | TR.32.10.1.5  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 5        | ENV 1998-1:2004     | CODE, COMB, ELA, DES, RS1, RS2, X, XV, Y, YV, Z, ZV, ACC, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SOI, ALP, Q                               | TR.32.10.1.6  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 6        | IBC 2006            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | TR.32.10.1.11 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 7        | IBC 2012            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | TR.32.10.1.12 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 8        | IBC 2015            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | TR.32.10.1.13 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 9        | IBC 2018            | CODE, COMB, TOR, DEC, ECC, ACC, X, XV, Y, YV, Z, ZV, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, LAT, LON, SS, S1, ZIP, SCL, FA, FV, TL         | TR.32.10.1.14 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 10       | SNiP II-7-81        | CODE, COMB, A, X, XV, KWX, KWXV, KX1, KX1V, Y, YV, KWY, KWYV, KY1, KY1V, Z, ZV, KWZ, KWZV, KZ1, KZ1V, ACC, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SOI, SAV | TR.32.10.1.15 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 11       | SP 14.13330.2011    | CODE, COMB, ECC, A, X, XV, Y, YV, Z, ZV, ACC, SCA, DAM, DAMV, CDA, MDA, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SOI                                                                        | TR.32.10.1.16 |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 12       | CANADIAN: NRC-2005  | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA                                       | TR.32.10.1.2  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 13       | CANADIAN: NRC-2010  | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA                                       | TR.32.10.1.3  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 14       | GB 50011 2010       | CODE, COMB, X, XV, Y, YV, Z, ZV, ALP, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, INT, FRE, FOR, RAR, GRO, SCL                                  | TR.32.10.1.7  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+                | 15       | CANADIAN: NRC-2020  | CODE, COMB, TOR, DEC, ECC, X, XV, Y, YV, Z, ZV, ACC, DIS, SCA, DAM, DAMV, CDA, MDA, LIN, LOG, MIS, MISV, ZPA, ZPAV, DOM, USIGN, SIGN, MODN, SAV, IMR, MODE, STA, SA1, SA2, SA3, SA4, SA5, SA6         | TR.32.10.1.4  |
+                +----------+---------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------+
+
+            Parameter To Keyword Mapping Table:
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Parameter                                                                            | Keyword | Valid Values                                                                      |
+                +======================================================================================+=========+===================================================================================+
+                | Code Type                                                                            | CODE    | 0 = Generic or Custom                                                             |
+                |                                                                                      |         | 1 = IS:1893 Part 1 2002                                                           |
+                |                                                                                      |         | 2 = IS:1893 2016                                                                  |
+                |                                                                                      |         | 3 = IS:1893 Part 4 2015                                                           |
+                |                                                                                      |         | 4 = ENV 1998-1:1994                                                               |
+                |                                                                                      |         | 5 = ENV 1998-1:2004                                                               |
+                |                                                                                      |         | 6 = IBC 2006                                                                      |
+                |                                                                                      |         | 7 = IBC 2012                                                                      |
+                |                                                                                      |         | 8 = IBC 2015                                                                      |
+                |                                                                                      |         | 9 = IBC 2018                                                                      |
+                |                                                                                      |         | 10 = SNiP II-7-81                                                                 |
+                |                                                                                      |         | 11 = SP 14.13330.2011                                                             |
+                |                                                                                      |         | 12 = CANADIAN: NRC-2005                                                           |
+                |                                                                                      |         | 13 = CANADIAN: NRC-2010                                                           |
+                |                                                                                      |         | 14 = GB 50011 2010                                                                |
+                |                                                                                      |         | 15 = CANADIAN: NRC-2020                                                           |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Combination Method                                                                   | COMB    | 0 = SRSS                                                                          |
+                |                                                                                      |         | 1 = ABS                                                                           |
+                |                                                                                      |         | 2 = CQC                                                                           |
+                |                                                                                      |         | 3 = ASCE                                                                          |
+                |                                                                                      |         | 4 = TEN                                                                           |
+                |                                                                                      |         | 5 = CSM                                                                           |
+                |                                                                                      |         | 6 = GRP                                                                           |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Zoning Factor                                                                        | A       |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | LoadType: Elastic                                                                    | ELA     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | LoadType: Des                                                                        | DES     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | LoadType: Type I                                                                     | RS1     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | LoadType: Type 2                                                                     | RS2     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Use Torsion                                                                          | TOR     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Dynamic Eccentricity                                                                 | DEC     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Accidental Eccentricity                                                              | ECC     | 0.05 - 0.1                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | X Activated                                                                          | X       | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | X Value                                                                              | XV      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Y Activated                                                                          | Y       | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Y Value                                                                              | YV      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Z Activated                                                                          | Z       | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Z Value                                                                              | ZV      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KWX Activated                                                                        | KWX     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KWX Value                                                                            | KWXV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KX1 Activated                                                                        | KX1     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KX1 Value                                                                            | KX1V    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KWY Activated                                                                        | KWY     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KWY Value                                                                            | KWYV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KY1 Activated                                                                        | KY1     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KY1 Value                                                                            | KY1V    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KWZ Activated                                                                        | KWZ     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KWZ Value                                                                            | KWZV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KZ1 Activated                                                                        | KZ1     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | KZ1 Value                                                                            | KZ1V    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Spectrum Type: Acceleration                                                          | ACC     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Spectrum Type: Displacement                                                          | DIS     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Scale                                                                                | SCA     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Damping Type: Damping                                                                | DAM     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Damping Value                                                                        | DAMV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Damping Type: CDAMP                                                                  | CDA     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Damping Type: MDAMP                                                                  | MDA     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Interpolation Type : Linear                                                          | LIN     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Interpolation Type : Logarithmic                                                     | LOG     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Missing Mass  Activated                                                              | MIS     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Missing Mass Value                                                                   | MISV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | ZPA Activated                                                                        | ZPA     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | ZPA Value                                                                            | ZPAV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Minimum Lateral Force (% of Seismic Weight)                                          | MLF     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Ignore modes with Mass Participation (IGN) Activated                                 | IGN     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | IGN Value                                                                            | IGNV    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | FF1                                                                                  | FF1     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | FF1 Value                                                                            | FF1V    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | FF2                                                                                  | FF2     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | FF2 Value                                                                            | FF2V    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Signed Response Spectrum Result Options : Dominant                                   | DOM     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Signed Response Spectrum Result Options : Unsigned                                   | USIGN   | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Signed Response Spectrum Result Options : Signed                                     | SIGN    | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Signed Response Spectrum Result Options (Dominant): Mode No                          | MODN    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | SAVE                                                                                 | SAV     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Individual Modal Response Load Case Generation Options: Generate load case for first | IMR     | 1 = Active                                                                        |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Individual Modal Response Load Case Generation Options: Modes                        | MODE    |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Individual Modal Response Load Case Generation Options: Starting Load Case           | STA     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Subsoil Class                                                                        | SOI     | | IS 1893 2002/2015/2016:0 = Custom, 1 = Hard Soil,2 = Medium Soil, 3 = Soft Soil |
+                |                                                                                      |         | | EURO 1994: 0 = A, 1 = B, 2 = C                                                  |
+                |                                                                                      |         | | EURO 2004:0 = A, 1 = B, 2 = C, 3 = D, 4 = E                                     |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Design Ground Acc.                                                                   | ALP     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Behaviour Factor                                                                     | Q       |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Latitude                                                                             | LAT     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Longitude                                                                            | LON     |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Mapped MCE for 0.2s spectral response acceleration                                   | SS      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Mapped MCE spectral response acceleration at a period of 1 second                    | S1      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | ZIP Code                                                                             | ZIP     | Valid Zip Code                                                                    |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Site Class                                                                           | SCL     | 0 = A, 1 = B, 2 = C,                                                              |
+                |                                                                                      |         | 3 = D, 4 = E, 5 = F                                                               |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Fa                                                                                   | FA      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Fv                                                                                   | FV      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+                | Long Period                                                                          | TL      |                                                                                   |
+                +--------------------------------------------------------------------------------------+---------+-----------------------------------------------------------------------------------+
+
+        Returns
+        ----
+        bool
+            'True' if the API successfully updates the response spectrum load
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> paramToValueMap = { "XV" : 2 , "DIS" : 1, "SCA" : 30, "CDA" : 1, "LOG" : 1, "MISV" : 1.8, "ZPAV" : 0.085, "SIGN" : 1, "SAV" : 1, "IMR" : 1, "STA" : 101};
+        >>> spectralDataPairs = { 0.1 : 1, 0.2 : 4, 0.3 : 7, 0.4 : 10, 0.5 : 7 };
+        >>> result = staad_obj.Load.UpdateResponseSpectrumLoad(4, 1, paramToValueMap, spectralDataPairs)
+        >>> print(result)
+        """
+        parameters = []
+        parameterValues = []
+        spectralDataPairs = []
+
+        for key, value in paramToValueMap.items():
+            parameters.append(str(key))
+            parameterValues.append(float(value))
+
+        for key, value in spectralData.items():
+            spectralDataPairs.append(float(key))
+            spectralDataPairs.append(float(value))
+
+        rs_param_safe_list = make_safe_array_string_input(parameters)
+        rs_param_val_safe_list = make_safe_array_double_input(parameterValues)
+        rs_param_val_list = make_variant_vt_ref(
+            rs_param_val_safe_list, automation.VT_ARRAY | automation.VT_R8
+        )
+        rs_spectral_data_safe_list = make_safe_array_double_input(spectralDataPairs)
+        rs_spectral_data_list = make_variant_vt_ref(
+            rs_spectral_data_safe_list, automation.VT_ARRAY | automation.VT_R8
+        )
+        if len(spectralDataPairs) == 0:
+            rs_spectral_data_list = rs_spectral_data_safe_list
+
+        retVal = self._load.UpdateResponseSpectrumLoad(
+            loadCaseNumber,
+            loadId,
+            rs_param_safe_list,
+            rs_param_val_list,
+            rs_spectral_data_list,
+        )
+        if not retVal:
+            raise OsErrorBase("API failed in update Response Spectrum Load", -1)
         return retVal

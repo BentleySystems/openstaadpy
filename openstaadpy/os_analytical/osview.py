@@ -2,7 +2,11 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
     make_safe_array_double,
     make_safe_array_double_input,
     make_safe_array_int,
@@ -10,10 +14,8 @@ from .openStaadHelper import (
     make_safe_array_long_input,
     make_variant_vt_ref,
 )
-from comtypes import automation
-from comtypes import CoInitialize
+from .oserrors import OsErrorBase, raise_os_error_if_error_code
 from .osgeometry import OSGeometry
-from .oserrors import raise_os_error_if_error_code
 
 
 class OSView:
@@ -52,6 +54,7 @@ class OSView:
             "SetLabel",
             "SetSectionView",
             "SetDiagramMode",
+            "SetStressType",
             "SetNodeAnnotationMode",
             "SetReactionAnnotationMode",
             "GetInterfaceMode",
@@ -145,24 +148,24 @@ class OSView:
         """
         self._view.ZoomExtentsMainView()
 
-    def ShowMembers(self, NMembers, NaMemberNos):
+    def ShowMembers(self, member_list: list | int):
         """
         Show specific members in the STAAD view.
 
         Parameters
-        ----------
-        NMembers : int
-            Number of members to show.
-        NaMemberNos : list of int
+        -----------
+        member_list : list of int
             List of member numbers to show.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.ShowMembers(2, [1, 2])
+        >>> staad_obj.View.ShowMembers([1, 2])
         """
-        safe_list = make_safe_array_long_input(NaMemberNos)
+        if isinstance(member_list, int):
+            member_list = [member_list]
+        safe_list = make_safe_array_long_input(member_list)
         lista_variant = make_variant_vt_ref(
             safe_list, automation.VT_ARRAY | automation.VT_I4
         )
@@ -170,7 +173,7 @@ class OSView:
         self._view.ShowAllMembers()
         self._view.HideAllMembers()
         self._geometry.ClearMemberSelection()
-        self._view.ShowMembers(NMembers, lista_variant)
+        self._view.ShowMembers(len(member_list), lista_variant)
         self._view.ShowIsometric()
         self._view.ZoomExtentsMainView()
         self._view.RefreshView()
@@ -193,14 +196,12 @@ class OSView:
         self._view.HideMember(IDMember)
         self._view.RefreshView()
 
-    def HideMembers(self, NMembers, NaMemberNos):
+    def HideMembers(self, NaMemberNos):
         """
         Hide specific members in the STAAD view.
 
         Parameters
         ----------
-        NMembers : int
-            Number of members to hide.
         NaMemberNos : list of int
             List of member numbers to hide.
 
@@ -215,7 +216,7 @@ class OSView:
             safe_list, automation.VT_ARRAY | automation.VT_I4
         )
 
-        self._view.HideMembers(NMembers, lista_variant)
+        self._view.HideMembers(len(NaMemberNos), lista_variant)
         self._view.RefreshView()
 
     def ShowBack(self):
@@ -316,7 +317,7 @@ class OSView:
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
 
-    def SpinLeft(self, Degrees):
+    def SpinLeft(self, Degrees: float):
         """
         Spin the view to the left by a specified number of degrees.
 
@@ -336,7 +337,7 @@ class OSView:
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
 
-    def SpinRight(self, Degrees):
+    def SpinRight(self, Degrees: float):
         """
         Spin the view to the right by a specified number of degrees.
 
@@ -375,7 +376,7 @@ class OSView:
         Returns
         -------
         tuple of int
-            (width, height) of the application desktop.
+            Tuple of width and height of the application desktop.
 
         Examples
         --------
@@ -389,10 +390,14 @@ class OSView:
         safe_n2 = make_safe_array_int(1)
         W = make_variant_vt_ref(safe_n2, automation.VT_I4)
 
-        self._view.GetApplicationDesktopSize(L, W)
+        retVal = self._view.GetApplicationDesktopSize(L, W)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        elif retVal < 0:
+            raise_os_error_if_error_code(retVal)
 
-        L = L[0]
-        W = W[0]
+        L = int(L[0])
+        W = int(W[0])
 
         return (L, W)
 
@@ -411,13 +416,23 @@ class OSView:
         yWindow : int
             Height of the window.
 
+        Returns
+        -------
+        bool
+            True if successful.
+
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.View.SetWindowPosition(100, 100, 800, 600)
         """
-        self._view.SetWindowPosition(xTop, yTop, xWindow, yWindow)
+        retVal = self._view.SetWindowPosition(xTop, yTop, xWindow, yWindow)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        elif retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return bool(retVal)
 
     def RotateUp(self, dDegrees: float):
         """
@@ -505,7 +520,7 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.View.CreateNewViewForSelections()
         """
-        return self._view.CreateNewViewForSelections()
+        self._view.CreateNewViewForSelections()
 
     def SetLabel(self, which: int, showFlag: bool):
         """
@@ -572,7 +587,7 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.View.SetLabel(20, True)
         """
-        return self._view.SetLabel(which, showFlag)
+        self._view.SetLabel(which, showFlag)
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
 
@@ -654,31 +669,31 @@ class OSView:
             +-----+--------------------------------------------------------+
             | 16  | Hide Plates & Solids                                   |
             +-----+--------------------------------------------------------+
-            | 18  | Hide Piping                                            |
+            | 17  | Hide Piping                                            |
             +-----+--------------------------------------------------------+
-            | 19  | Sort Geometry                                          |
+            | 18  | Sort Geometry                                          |
             +-----+--------------------------------------------------------+
-            | 20  | Sort Nodes                                             |
+            | 19  | Sort Nodes                                             |
             +-----+--------------------------------------------------------+
-            | 21  | Plate Stress                                           |
+            | 20  | Plate Stress                                           |
             +-----+--------------------------------------------------------+
-            | 22  | Solid Stress                                           |
+            | 21  | Solid Stress                                           |
             +-----+--------------------------------------------------------+
-            | 23  | Mode Shape                                             |
+            | 22  | Mode Shape                                             |
             +-----+--------------------------------------------------------+
-            | 24  | Stress Animation                                       |
+            | 23  | Stress Animation                                       |
             +-----+--------------------------------------------------------+
-            | 25  | Plate reinforcement                                    |
+            | 24  | Plate reinforcement                                    |
             +-----+--------------------------------------------------------+
-            | 26  | Deck Influence Diagram*                                |
+            | 25  | Deck Influence Diagram*                                |
             +-----+--------------------------------------------------------+
-            | 27  | Deck Carriageways*                                     |
+            | 26  | Deck Carriageways*                                     |
             +-----+--------------------------------------------------------+
-            | 28  | Deck Triangulation*                                    |
+            | 27  | Deck Triangulation*                                    |
             +-----+--------------------------------------------------------+
-            | 29  | Deck Loads*                                            |
+            | 28  | Deck Loads*                                            |
             +-----+--------------------------------------------------------+
-            | 30  | Deck Vehicles*                                         |
+            | 29  | Deck Vehicles*                                         |
             +-----+--------------------------------------------------------+
             |     | (*) Requires the STAAD.beava component                 |
             +-----+--------------------------------------------------------+
@@ -687,6 +702,13 @@ class OSView:
             Variable to set label mode on (True) or off (False).
         refreshFlag : bool
             Variable (True or False). If True, STAAD.Pro viewing windows refresh.
+
+        Notes
+        -----
+        For Plate Stress/Solid Stress (which = 20/21), a stress type must already be set via
+        :meth:`SetStressType` before calling this with showFlag = True, otherwise the diagram is
+        not turned on (matches the Diagrams>Plate/Solid Stress dialog, which also requires a type
+        to be picked before the contour can be shown).
 
         Examples
         -------
@@ -697,6 +719,142 @@ class OSView:
         self._view.SetDiagramMode(which, showFlag, refreshFlag)
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
+
+    def SetStressType(self, entityType: int, stressType: int, refreshFlag: bool):
+        """
+        Sets the plate or solid stress type used for the contour diagram, as shown in the
+        Diagrams>Plate/Solid Stress dialog, and recomputes its legend range for the active load.
+        Call this before :meth:`SetDiagramMode` so the contour has a type to display when the
+        diagram is turned on; it can also be called afterwards to change the type of an
+        already-shown diagram.
+
+        Parameters
+        ----------
+        entityType : int
+            Variable identifying which stress diagram to set. It may be one of the following values:
+                +-----+--------------+
+                | ID  | Entity Type  |
+                +=====+==============+
+                | 20  | Plate Stress |
+                +-----+--------------+
+                | 21  | Solid Stress |
+                +-----+--------------+
+
+        stressType : int
+            Variable identifying the stress type.
+
+            When entityType = 20 (Plate Stress), it may be one of the following values:
+                +-----+------------------------------+
+                | ID  | Plate Stress Type            |
+                +=====+==============================+
+                | 1   | Max Absolute                 |
+                +-----+------------------------------+
+                | 2   | Top Max                      |
+                +-----+------------------------------+
+                | 3   | Top Min                      |
+                +-----+------------------------------+
+                | 4   | Top Max Shear                |
+                +-----+------------------------------+
+                | 5   | Bottom Max                   |
+                +-----+------------------------------+
+                | 6   | Bottom Min                   |
+                +-----+------------------------------+
+                | 7   | Bottom Max Shear             |
+                +-----+------------------------------+
+                | 8   | Max Von Mises                |
+                +-----+------------------------------+
+                | 9   | Von Mises Top Max            |
+                +-----+------------------------------+
+                | 10  | Von Mises Bottom Max         |
+                +-----+------------------------------+
+                | 11  | Max Tresca                   |
+                +-----+------------------------------+
+                | 12  | Top Tresca                   |
+                +-----+------------------------------+
+                | 13  | Bottom Tresca                |
+                +-----+------------------------------+
+                | 14  | FX                           |
+                +-----+------------------------------+
+                | 15  | FY                           |
+                +-----+------------------------------+
+                | 16  | FXY                          |
+                +-----+------------------------------+
+                | 17  | MX                           |
+                +-----+------------------------------+
+                | 18  | MY                           |
+                +-----+------------------------------+
+                | 19  | MZ                           |
+                +-----+------------------------------+
+                | 20  | QX                           |
+                +-----+------------------------------+
+                | 21  | QY                           |
+                +-----+------------------------------+
+                | 22  | Global                       |
+                +-----+------------------------------+
+                | 23  | Global Membrane Stresses     |
+                +-----+------------------------------+
+                | 24  | Global Shear Stresses        |
+                +-----+------------------------------+
+                | 25  | Base Pressure                |
+                +-----+------------------------------+
+                | 26  | Combined X Top               |
+                +-----+------------------------------+
+                | 27  | Combined Y Top               |
+                +-----+------------------------------+
+                | 28  | Combined XY Top              |
+                +-----+------------------------------+
+                | 29  | Combined X Bottom            |
+                +-----+------------------------------+
+                | 30  | Combined Y Bottom            |
+                +-----+------------------------------+
+                | 31  | Combined XY Bottom           |
+                +-----+------------------------------+
+
+            When entityType = 21 (Solid Stress), it may be one of the following values:
+                +-----+------------------------------+
+                | ID  | Solid Stress Type            |
+                +=====+==============================+
+                | 1   | SXX                          |
+                +-----+------------------------------+
+                | 2   | SYY                          |
+                +-----+------------------------------+
+                | 3   | SZZ                          |
+                +-----+------------------------------+
+                | 4   | SXY                          |
+                +-----+------------------------------+
+                | 5   | SYZ                          |
+                +-----+------------------------------+
+                | 6   | SXZ                          |
+                +-----+------------------------------+
+                | 7   | S11                          |
+                +-----+------------------------------+
+                | 8   | S22                          |
+                +-----+------------------------------+
+                | 9   | S33                          |
+                +-----+------------------------------+
+                | 10  | Sigma Effective (Von Mises)  |
+                +-----+------------------------------+
+
+        refreshFlag : bool
+            Variable (True or False). If True, STAAD.Pro viewing windows refresh.
+
+        Returns
+        -------
+        bool
+            True if successful.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> staad_obj.View.SetStressType(20, 8, True)
+        """
+        retVal = self._view.SetStressType(entityType, stressType, refreshFlag)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        elif retVal < 0:
+            raise_os_error_if_error_code(retVal)
+        return bool(retVal)
 
     def SetNodeAnnotationMode(self, dFlag: bool, refreshFlag: bool):
         """
@@ -770,7 +928,9 @@ class OSView:
 
     def GetInterfaceMode(self):
         """
-        This function returns the current visual mode in the STAAD.Pro environment.
+        Gets the interface mode type.
+        Note:
+            This function returns the current visual mode in the STAAD.Pro environment.
 
         Returns
         -------
@@ -785,13 +945,15 @@ class OSView:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.GetInterfaceMode()
+        >>> mode = staad_obj.View.GetInterfaceMode()
         """
         return self._view.GetInterfaceMode()
 
     def SetInterfaceMode(self, interfaceMode: int):
         """
-        This function sets the current visual mode in the STAAD.Pro environment.
+        Sets the interface mode type.
+        Note:
+            This function sets the current visual mode in the STAAD.Pro environment.
 
         Parameters
         ----------
@@ -828,21 +990,20 @@ class OSView:
         Returns
         -------
         int
-            Returns 0 if Pre-processor or modeling mode.
-            Returns 1 if Post-processing mode.
-            Returns 2 if Interactive design mode for STAAD.etc interoperability.
-            Returns 4 if Piping mode.
-            Returns 5 if BEAVA (i.e., Bridge Deck ) mode.
+            True if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.SetInterfaceMode(1)
+        >>> status = staad_obj.View.SetInterfaceMode(1)
         """
-        self._view.SetInterfaceMode(interfaceMode)
+        retVal = self._view.SetInterfaceMode(interfaceMode)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
+        return retVal
 
     def SetModeSectionPage(
         self, interfaceMode: int, sectionNumber: int, pageNumber: int
@@ -1170,7 +1331,7 @@ class OSView:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.SelectMembersParallelTo(5)
+        >>> staad_obj.View.SelectMembersParallelTo("X")
         """
         self._view.SelectMembersParallelTo(bstrAxis)
         self._view.RefreshView()
@@ -1189,7 +1350,6 @@ class OSView:
         -------
         int
             Returns True if successful
-            Returns False if unsuccessful
 
         Examples
         --------
@@ -1197,7 +1357,10 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.View.SelectGroup("grp_name")
         """
-        return self._view.SelectGroup(bstrGroup)
+        retVal = self._view.SelectGroup(bstrGroup)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return retVal
 
     def SelectInverse(self, entityType: int):
         """
@@ -1231,7 +1394,7 @@ class OSView:
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
 
-    def SelectByItemList(self, entityType: int, nItems: int, itemList: list):
+    def SelectByItemList(self, entityType: int, itemList: list):
         """
         Select entities as specified.
 
@@ -1252,8 +1415,6 @@ class OSView:
                 +-----+----------------+
                 | 5   | Surface        |
                 +-----+----------------+
-        nItems : int
-            Variable that holds total number of entities needs to be selected.
         itemList : list of int
             List holds the entity nos, which need to be selected.
 
@@ -1264,7 +1425,10 @@ class OSView:
         >>> staad_obj.View.SelectByItemList(1, 2, [1, 2])
         """
         entityList = make_safe_array_long_input(itemList)
-        self._view.SelectByItemList(entityType, nItems, entityList)
+        entity_list_vt = make_variant_vt_ref(
+            entityList, automation.VT_ARRAY | automation.VT_I4
+        )
+        self._view.SelectByItemList(entityType, len(itemList), entity_list_vt)
         self._view.RefreshView()
         self._view.ZoomExtentsMainView()
 
@@ -1441,7 +1605,7 @@ class OSView:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.GetNoOfBeamsInView()
+        >>> count = staad_obj.View.GetNoOfBeamsInView()
         """
         return self._view.GetNoOfBeamsInView()
 
@@ -1466,7 +1630,10 @@ class OSView:
         >>> staad_obj.View.GetBeamsInView([1, 2, 4])
         """
         nBeamList_ref = make_safe_array_long_input(nBeamList)
-        return self._view.GetBeamsInView(nBeamList_ref)
+        nBeamList_vt = make_variant_vt_ref(
+            nBeamList_ref, automation.VT_ARRAY | automation.VT_I4
+        )
+        return self._view.GetBeamsInView(nBeamList_vt)
 
     def CreateNewViewForSelectionsEx(self, windowOptions: int):
         """
@@ -1480,16 +1647,18 @@ class OSView:
         Returns
         -------
         bool
-            Returns True Creation of new view is successful.
-            Returns False Creation of new view is unsuccessful.
+            True Creation of new view is successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.CreateNewViewForSelectionsEx(1)
+        >>> result = staad_obj.View.CreateNewViewForSelectionsEx(1)
         """
-        return self._view.CreateNewViewForSelectionsEx(windowOptions)
+        retVal = self._view.CreateNewViewForSelectionsEx(windowOptions)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return retVal
 
     def ExportView(
         self, FileLocation: str, FileName: str, FileFormat: int, Overwrite: bool
@@ -1513,13 +1682,13 @@ class OSView:
         Returns
         -------
         int
-            Returns 1 if Export view is successful.
+            1 if Export view is successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.ExportView(r"<folderPath>", "<fileName>", 1, True)
+        >>> result = staad_obj.View.ExportView(r"<folderPath>", "<fileName>", 1, True)
         """
         retVal = self._view.ExportView(FileLocation, FileName, FileFormat, Overwrite)
         if retVal < 0:
@@ -1539,14 +1708,16 @@ class OSView:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.CopyPicture()
+        >>> result = staad_obj.View.CopyPicture()
         """
         safe_xDim = make_safe_array_long(0)
         xDim = make_variant_vt_ref(safe_xDim, automation.VT_I4)
         safe_yDim = make_safe_array_long(0)
         yDim = make_variant_vt_ref(safe_yDim, automation.VT_I4)
 
-        self._view.CopyPicture(xDim, yDim)
+        retVal = self._view.CopyPicture(xDim, yDim)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
         return (xDim[0], yDim[0])
 
     def GetScaleValues(self):
@@ -1593,7 +1764,7 @@ class OSView:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> list = staad_obj.View.GetScaleValues()
+        >>> scales = staad_obj.View.GetScaleValues()
         >>> print(list)
         """
         scaleCount = self._view.GetScaleCount()
@@ -1625,10 +1796,13 @@ class OSView:
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.SetScaleValues([1.0, 2.5, 3.2])
+        >>> result = staad_obj.View.SetScaleValues([5, 8])
         """
         ScalesList_safe = make_safe_array_double_input(ScalesList)
-        retVal = self._view.SetScaleValues(ScalesList_safe)
+        scalesList_vt = make_variant_vt_ref(
+            ScalesList_safe, automation.VT_ARRAY | automation.VT_R8
+        )
+        retVal = self._view.SetScaleValues(scalesList_vt)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
         return retVal
@@ -1657,7 +1831,9 @@ class OSView:
         safe_value = make_safe_array_double(0)
         value = make_variant_vt_ref(safe_value, automation.VT_R8)
 
-        self._view.GetScaleValueByType(scaleTypeId, value)
+        retVal = self._view.GetScaleValueByType(scaleTypeId, value)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
         return value[0]
 
     def SetScaleValueByType(self, scaleTypeId: int, value: float):
@@ -1674,8 +1850,7 @@ class OSView:
         Returns
         -------
         bool
-            Returns 1/TRUE Value was successfully updated.
-            Returns 0/FALSE Value could not be updated.
+            True Value was successfully updated.
 
         Examples
         --------
@@ -1683,7 +1858,10 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> retValue = staad_obj.View.SetScaleValueByType(1, 1.2)
         """
-        return self._view.SetScaleValueByType(scaleTypeId, value)
+        retVal = self._view.SetScaleValueByType(scaleTypeId, value)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return bool(retVal)
 
     def GetScaleCount(self):
         """
@@ -1709,8 +1887,7 @@ class OSView:
         Returns
         -------
         int
-            Returns 1 if View successfully detached.
-            Returns 0 if Unsuccessful
+            1 if View successfully detached.
 
         Examples
         --------
@@ -1721,6 +1898,8 @@ class OSView:
         retVal = self._view.DetachView()
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Unable to Detach Active View.", -1)
         return retVal
 
     def RenameView(self, viewName: str):
@@ -1748,6 +1927,8 @@ class OSView:
         retVal = self._view.RenameView(viewName)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Unable to Rename Active View.", -1)
         return retVal
 
     def OpenView(self, viewName: str, windowOptions: bool):
@@ -1778,6 +1959,8 @@ class OSView:
         retVal = self._view.OpenView(viewName, windowOptions)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Unable to open view.", -1)
         return retVal
 
     def SaveView(self, viewName: str, overWrite: bool):
@@ -1808,6 +1991,8 @@ class OSView:
         retVal = self._view.SaveView(viewName, overWrite)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Unable to Save Active View.", -1)
         return retVal
 
     def GetWindowTitle(self, id: int):
@@ -1857,8 +2042,7 @@ class OSView:
         Returns
         -------
         bool
-            Returns True if Window closed.
-            Returns FALSE if Unsuccessful.
+            True if Window closed.
 
         Examples
         --------
@@ -1866,7 +2050,10 @@ class OSView:
         >>> staad_obj = os_analytical.connect()
         >>> output = staad_obj.View.CloseActiveWindow()
         """
-        return self._view.CloseActiveWindow()
+        retVal = self._view.CloseActiveWindow()
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return retVal
 
     def SetActiveWindow(self, id: int):
         """
@@ -1880,16 +2067,18 @@ class OSView:
         Returns
         -------
         bool
-            Returns True if successful.
-            Returns FALSE if unsuccessful.
+            True if successful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.SetActiveWindow(2)
+        >>> status = staad_obj.View.SetActiveWindow(2)
         """
-        return self._view.SetActiveWindow(id)
+        retVal = self._view.SetActiveWindow(id)
+        if not retVal:
+            raise_os_error_if_error_code(-1)
+        return retVal
 
     def SetDesignResults(self, utilization: int, color: bool, showValues: bool):
         """
@@ -1908,15 +2097,16 @@ class OSView:
         -------
         int
             Returns 1 if Set Design Results is successful.
-            Returns 0 if Unsuccessful.
 
         Examples
         --------
         >>> from openstaadpy import os_analytical
         >>> staad_obj = os_analytical.connect()
-        >>> staad_obj.View.SetDesignResults(1, True, True)
+        >>> status = staad_obj.View.SetDesignResults(1, True, True)
         """
         retVal = self._view.SetDesignResults(utilization, color, showValues)
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
+        elif retVal == 0:
+            raise OsErrorBase("Unable to set design results to active view.", -1)
         return retVal
