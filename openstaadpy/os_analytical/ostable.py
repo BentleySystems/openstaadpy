@@ -2,11 +2,12 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from comtypes import CoInitialize
+
+from .openstaadhelper import (
     create_bstr,
     make_byref,
 )
-from comtypes import CoInitialize
 from .oserrors import raise_os_error_if_error_code
 
 
@@ -61,8 +62,7 @@ class OSTable:
         Returns
         -------
         int
-            Return report number\n
-            Return 0 if Create Report error.
+            Return report number of newly create report
 
         Example
         -------
@@ -148,8 +148,7 @@ class OSTable:
         Returns
         -------
         int
-            Return table number\n
-            Return 0 if Create table error.
+            Return table number
 
         Examples
         --------
@@ -575,7 +574,7 @@ class OSTable:
         col_no : int
             Column number for specified table, start from 1.
         align : int
-           align Sets the text in a particular row and column to a specified horizontal alignment. The possible values are:0 = left; 1 = center; 2 = right
+           Set horizontal alignment for the text: 0 for left, 1 for center, 2 for right.
 
         Examples
         --------
@@ -605,7 +604,7 @@ class OSTable:
         col_no : int
             Column number for specified table, start from 1.
         align : int
-           align Sets the text in a particular row and column to a specified vertical alignment. The possible values are: 0 = top; 4 = center; 8 = bottom
+           Set vertical alignment for the text: 0 for top, 4 for center, 8 for bottom.
 
         Examples
         --------
@@ -614,7 +613,7 @@ class OSTable:
         >>> report_no = staad_obj.Table.CreateReport("testreport")
         >>> table_number = staad_obj.Table.AddTable(report_no, "Table1", 10, 5)
         >>> staad_obj.Table.SetCellValue(report_no, table_number, 1, 5, "abc")
-        >>> staad_obj.Table.SetCellTextVertAlignment(report_no, table_number, 1, 5, 2)
+        >>> staad_obj.Table.SetCellTextVertAlignment(report_no, table_number, 1, 5, 4)
         """
         self._table.SetCellTextVertAlignment(report_no, table_no, row_no, col_no, align)
 

@@ -1,0 +1,59 @@
+/* Sidebar adjustments */
+.bd-sidebar-primary {
+    margin-left: 0 !important;
+    padding-left: 0 !important;
+    /*width: 220px !important;*/
+}
+
+/* Right sidebar (Table of Contents) adjustments */
+/*.bd-sidebar-secondary {
+    width: 320px !important;
+    min-width: 220px !important;
+    max-width: 400px !important;
+    padding-right: 10px !important;
+    top: 0;
+    margin-right: 0 !important;
+}*/
+
+/* Content area adjustments */
+.bd-main .bd-content {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+/*    max-width: 100vw !important;
+    width: calc(100vw - 220px - 320px) !important;*/
+}
+
+/* Page container adjustments */
+.bd-page-width {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+}
+
+/* Responsive: Stack sidebars on small screens */
+/*@media (max-width: 1200px) {
+    .bd-sidebar-secondary {
+        display: none !important;
+    }
+
+    .bd-main .bd-content {
+        width: calc(100vw - 220px) !important;
+    }
+}*/
+
+/* When the primary sidebar is hidden, expand the content area */
+/*.sidebar-primary-collapsed .bd-main .bd-content,
+.bd-sidebar-primary[aria-hidden="true"] ~ .bd-main .bd-content {
+    width: calc(100vw - 320px) !important;
+}
+
+.sidebar-primary-collapsed .bd-sidebar-primary,
+.bd-sidebar-primary[aria-hidden="true"] {
+    display: none !important;
+}*/
+

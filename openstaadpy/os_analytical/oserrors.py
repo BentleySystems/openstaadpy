@@ -31,15 +31,6 @@ class OsError(OsErrorBase):
         super().__init__("General error.", -1)
 
 
-class OsUnableToCreateProp(OsErrorBase):
-    """
-    Raised when a property cannot be created in OpenSTAAD.
-    """
-
-    def __init__(self):
-        super().__init__("Unable to create property.", 0)
-
-
 class OsInvalidModelPath(OsErrorBase):
     """
     Raised when an invalid model path is provided.
@@ -212,15 +203,6 @@ class OsInvalidNodeNo(OsErrorBase):
 
 
 # Beam Errors
-
-
-class OsCannotFindMember(OsErrorBase):
-    """
-    Raised when a member (beam) cannot be found in the model.
-    """
-
-    def __init__(self):
-        super().__init__("Cannot find member.", 0)
 
 
 class OsBeamNotFound(OsErrorBase):
@@ -648,6 +630,15 @@ class OsUptSectionExists(OsErrorBase):
         super().__init__("UPT section already exists.", -6045)
 
 
+class OsInvalidAttrValPair(OsErrorBase):
+    """
+    Raised when an invalid attribute-value pair is provided.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid attribute-value pair is provided.", -6049)
+
+
 class OsUptNotFound(OsErrorBase):
     """
     Raised when a UPT (User Provided Table) cannot be found.
@@ -665,6 +656,16 @@ class OsGroupAlreadyExists(OsErrorBase):
 
     def __init__(self):
         super().__init__("Group already exists.", -7001)
+
+
+# Spring Errors
+class OsSpringNotDefinedAtNode(OsErrorBase):
+    """
+    Raised when a spring is not defined at a node.
+    """
+
+    def __init__(self):
+        super().__init__("Spring not defined at node.", -7504)
 
 
 # Load Errors
@@ -756,6 +757,163 @@ class OsInvalidLoadCombCategory(OsErrorBase):
 
     def __init__(self):
         super().__init__("Invalid load combination category.", -8041)
+
+
+# Enclosed Zone Errors
+class OsEnclosedZoneNotFound(OsErrorBase):
+    """
+    Raised when an enclosed zone is not found.
+    """
+
+    def __init__(self):
+        super().__init__("Enclosed zone not found.", -8043)
+
+
+class OsCreateEnclosedZoneFailed(OsErrorBase):
+    """
+    Raised when creating an enclosed zone fails.
+    """
+
+    def __init__(self):
+        super().__init__("Failed to create enclosed zone.", -8044)
+
+
+class OsAddOpeningFailed(OsErrorBase):
+    """
+    Raised when adding an opening to an enclosed zone fails.
+    """
+
+    def __init__(self):
+        super().__init__("Failed to add opening to enclosed zone.", -8045)
+
+
+class OsIgnoreMemberPanelFailed(OsErrorBase):
+    """
+    Raised when ignoring members for panel formation fails.
+    """
+
+    def __init__(self):
+        super().__init__("Failed to ignore members for panel formation.", -8046)
+
+
+class OsIgnoreMemberLoadFailed(OsErrorBase):
+    """
+    Raised when ignoring members for load transfer fails.
+    """
+
+    def __init__(self):
+        super().__init__("Failed to ignore members for load transfer.", -8047)
+
+
+class OsEnclosedZoneAlreadyExists(OsErrorBase):
+    """
+    Raised when an enclosed zone with the given name already exists.
+    """
+
+    def __init__(self):
+        super().__init__("Enclosed zone already exists.", -8048)
+
+
+class OsAddEnclosedZoneLoadFailed(OsErrorBase):
+    """
+    Raised when adding a load to an enclosed zone fails.
+    """
+
+    def __init__(self):
+        super().__init__("Failed to add load to enclosed zone.", -8049)
+
+
+# Floor Boundary Errors
+class OsIndexOutOfRange(OsErrorBase):
+    """
+    Raised when an index is out of range.
+    """
+
+    def __init__(self):
+        super().__init__("Index out of range.", -130)
+
+
+class OsInvalidDirectionCode(OsErrorBase):
+    """
+    Raised when an invalid direction code is provided.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid direction code.", -131)
+
+
+class OsBoundaryInsufficientNodes(OsErrorBase):
+    """
+    Raised when insufficient nodes are provided for the floor boundary.
+    """
+
+    def __init__(self):
+        super().__init__("Insufficient nodes for the floor boundary.", -8101)
+
+
+class OsBoundaryInsufficientBeams(OsErrorBase):
+    """
+    Raised when insufficient beams are found for the floor boundary.
+    """
+
+    def __init__(self):
+        super().__init__("Insufficient beams for the floor boundary.", -8102)
+
+
+class OsBoundaryNonCoplanar(OsErrorBase):
+    """
+    Raised when floor boundary nodes are not coplanar.
+    """
+
+    def __init__(self):
+        super().__init__("Floor boundary nodes are not coplanar.", -8103)
+
+
+class OsBoundaryAllNodesCollinear(OsErrorBase):
+    """
+    Raised when all floor boundary nodes are collinear.
+    """
+
+    def __init__(self):
+        super().__init__("All floor boundary nodes are collinear.", -8104)
+
+
+class OsBoundaryMissingNodeReference(OsErrorBase):
+    """
+    Raised when a node reference is missing in the floor boundary.
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Beams have missing node reference in the floor boundary.", -8105
+        )
+
+
+class OsBoundaryHasDeadEndEdges(OsErrorBase):
+    """
+    Raised when the floor boundary has dead-end edges.
+    """
+
+    def __init__(self):
+        super().__init__("Floor boundary has dead-end edges.", -8106)
+
+
+class OsBoundaryNoBeamsFound(OsErrorBase):
+    """
+    Raised when no beams are found for the floor boundary.
+    """
+
+    def __init__(self):
+        super().__init__("No beams found for the floor boundary.", -8107)
+
+
+class OsBoundaryNotFound(OsErrorBase):
+    """
+    Raised when the floor boundary cannot be identified.
+    """
+
+    def __init__(self):
+        super().__init__("Floor boundary cannot be identified.", -8108)
 
 
 # Results Errors
@@ -895,7 +1053,9 @@ def raise_os_error_if_error_code(code):
         -6032: OsAddUptSectionFailed,
         -6036: OsUptNotFound,
         -6045: OsUptSectionExists,
+        -6049: OsInvalidAttrValPair,
         -7001: OsGroupAlreadyExists,
+        -7504: OsSpringNotDefinedAtNode,
         -8001: OsInvalidLoadDirection,
         -8002: OsLoadCaseNotFound,
         -8004: OsCreateLoadFailed,
@@ -906,6 +1066,23 @@ def raise_os_error_if_error_code(code):
         -8039: OsInvalidLoadDefId,
         -8040: OsInvalidLoadCombName,
         -8041: OsInvalidLoadCombCategory,
+        -8043: OsEnclosedZoneNotFound,
+        -8044: OsCreateEnclosedZoneFailed,
+        -8045: OsAddOpeningFailed,
+        -8046: OsIgnoreMemberPanelFailed,
+        -8047: OsIgnoreMemberLoadFailed,
+        -8048: OsEnclosedZoneAlreadyExists,
+        -8049: OsAddEnclosedZoneLoadFailed,
+        -130: OsIndexOutOfRange,
+        -131: OsInvalidDirectionCode,
+        -8101: OsBoundaryInsufficientNodes,
+        -8102: OsBoundaryInsufficientBeams,
+        -8103: OsBoundaryNonCoplanar,
+        -8104: OsBoundaryAllNodesCollinear,
+        -8105: OsBoundaryMissingNodeReference,
+        -8106: OsBoundaryHasDeadEndEdges,
+        -8107: OsBoundaryNoBeamsFound,
+        -8108: OsBoundaryNotFound,
         -9004: OsBeamForcesNotLoaded,
         -9911: OsNoGnlResultSet,
         -9915: OsResultNotFound,

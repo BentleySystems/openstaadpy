@@ -2,7 +2,12 @@
 # Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 # See COPYRIGHT.md in the repository root for full copyright notice
 # ---------------------------------------------------------------------------------------------
-from .openStaadHelper import (
+from __future__ import annotations
+
+from comtypes import CoInitialize, automation
+
+from .openstaadhelper import (
+    make_out_variant,
     make_safe_array_double,
     make_safe_array_double_input,
     make_safe_array_long,
@@ -13,8 +18,6 @@ from .openStaadHelper import (
     make_variant_vt_ref,
 )
 from .oserrors import OsInvalidArgument, raise_os_error_if_error_code
-from comtypes import automation
-from comtypes import CoInitialize
 
 
 class OSGeometry:
@@ -164,6 +167,13 @@ class OSGeometry:
             "GetSolidIncidence_CIS2",
             "SetCheckForIdenticalEntity",
             "SetFlagForHiddenEntities",
+            "GetFloorLevels",
+            "GetFloorNodesAtLevel",
+            "GetFloorBeamsAtLevel",
+            "IdentifyFloorBoundariesFromNodes",
+            "GetFloorBoundaryNodesByIndex",
+            "GetFloorBoundaryBeamsByIndex",
+            "GetFloorBoundaryAreaByIndex",
         ]
 
         for function_name in self._functions:
@@ -3172,7 +3182,7 @@ class OSGeometry:
         """
         if isinstance(plate_ids, int):
             plate_ids = [plate_ids]
-        if not len(plate_ids) == len(plate_incidences):
+        if len(plate_ids) != len(plate_incidences):
             raise_os_error_if_error_code(-100)
         if (
             not isinstance(plate_incidences, list)
@@ -3256,7 +3266,7 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.CreateMultipleNodes(node_ids,nodeCoordinates)
         """
-        if not len(node_ids) == len(nodeCoordinates):
+        if len(node_ids) != len(nodeCoordinates):
             raise_os_error_if_error_code(-100)
         if (
             not isinstance(nodeCoordinates, list)
@@ -3295,7 +3305,7 @@ class OSGeometry:
         >>> staad_obj = os_analytical.connect()
         >>> staad_obj.Geometry.CreateMultipleBeams(beam_ids, beam_incidences)
         """
-        if not len(beam_ids) == len(beam_incidences):
+        if len(beam_ids) != len(beam_incidences):
             raise_os_error_if_error_code(-100)
         if (
             not isinstance(beam_incidences, list)
@@ -4292,3 +4302,223 @@ class OSGeometry:
         if flag not in (0, 1, 2):
             raise_os_error_if_error_code(-100)
         self._geometry.SetFlagForHiddenEntities(flag)
+
+    # FLOOR FUNCTIONS
+
+    def GetFloorLevels(self):
+        """
+        Get the floor levels (unique vertical coordinates) in the model.
+
+        The floor levels are determined by grouping nodes along the vertical axis
+        (Y if Y-up, Z if Z-up) using a small tolerance.
+
+        Returns
+        -------
+        list of float
+            List of floor level coordinates in base units (meters or inches).
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> levels = staad_obj.Geometry.GetFloorLevels()
+        >>> print(levels)
+        """
+        out_var, result_var = make_out_variant()
+        count = self._geometry.GetFloorLevels(out_var)
+        if count < 0:
+            raise_os_error_if_error_code(count)
+        if count == 0:
+            return []
+        return list(result_var.value)
+
+    def GetFloorNodesAtLevel(self, floorLevel: float):
+        """
+        Get all node numbers at a specified floor level.
+
+        Parameters
+        ----------
+        floorLevel : float
+            The floor level coordinate along the vertical axis in base units
+            (meters for Metric, inches for English). This is the Y-coordinate
+            if the model is Y-up, or the Z-coordinate if the model is Z-up.
+            Use GetFloorLevels() to obtain the valid floor level values.
+
+        Returns
+        -------
+        list of int
+            Sorted list of node numbers at the specified floor level.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> nodes = staad_obj.Geometry.GetFloorNodesAtLevel(10.0)
+        >>> print(nodes)
+        """
+        out_var, result_var = make_out_variant()
+        count = self._geometry.GetFloorNodesAtLevel(floorLevel, out_var)
+        if count < 0:
+            raise_os_error_if_error_code(count)
+        if count == 0:
+            return []
+        return list(result_var.value)
+
+    def GetFloorBeamsAtLevel(self, floorLevel: float):
+        """
+        Get all beam numbers at a specified floor level.
+
+        A beam is considered at the floor level if both its start and end nodes
+        are at the specified level.
+
+        Parameters
+        ----------
+        floorLevel : float
+            The floor level coordinate along the vertical axis in base units
+            (meters for Metric, inches for English). This is the Y-coordinate
+            if the model is Y-up, or the Z-coordinate if the model is Z-up.
+            Use GetFloorLevels() to obtain the valid floor level values.
+
+        Returns
+        -------
+        list of int
+            Sorted list of beam numbers at the specified floor level.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> beams = staad_obj.Geometry.GetFloorBeamsAtLevel(10.0)
+        >>> print(beams)
+        """
+        out_var, result_var = make_out_variant()
+        count = self._geometry.GetFloorBeamsAtLevel(floorLevel, out_var)
+        if count < 0:
+            raise_os_error_if_error_code(count)
+        if count == 0:
+            return []
+        return list(result_var.value)
+
+    def IdentifyFloorBoundariesFromNodes(self, nodeIds: list):
+        """
+        Identify floor boundaries (sub-floors) from a set of node IDs.
+
+        This function analyzes the given nodes and the beams connecting them
+        to identify enclosed floor boundaries. Results are stored internally
+        and can be retrieved using GetFloorBoundaryNodesByIndex,
+        GetFloorBoundaryBeamsByIndex, and GetFloorBoundaryAreaByIndex.
+
+        Parameters
+        ----------
+        nodeIds : list of int
+            List of node IDs representing a floor. Must contain at least 3
+            coplanar, non-collinear nodes connected by at least 3 beams.
+
+        Returns
+        -------
+        int
+            Number of floor boundaries (sub-floors) identified.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> count = staad_obj.Geometry.IdentifyFloorBoundariesFromNodes([1, 2, 3, 4])
+        >>> print(count)
+        """
+        safe_nodes = make_safe_array_long_input(nodeIds)
+        count = self._geometry.IdentifyFloorBoundariesFromNodes(safe_nodes)
+        if count < 0:
+            raise_os_error_if_error_code(count)
+        return count
+
+    def GetFloorBoundaryNodesByIndex(self, boundaryIndex: int):
+        """
+        Get the node numbers for a specific floor boundary.
+
+        Must be called after IdentifyFloorBoundariesFromNodes.
+
+        Parameters
+        ----------
+        boundaryIndex : int
+            0-based index of the floor boundary.
+
+        Returns
+        -------
+        list of int
+            List of node numbers forming the boundary.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> nodes = staad_obj.Geometry.GetFloorBoundaryNodesByIndex(0)
+        >>> print(nodes)
+        """
+        out_var, result_var = make_out_variant()
+        count = self._geometry.GetFloorBoundaryNodesByIndex(boundaryIndex, out_var)
+        if count < 0:
+            raise_os_error_if_error_code(count)
+        if count == 0:
+            return []
+        return list(result_var.value)
+
+    def GetFloorBoundaryBeamsByIndex(self, boundaryIndex: int):
+        """
+        Get the beam numbers for a specific floor boundary.
+
+        Must be called after IdentifyFloorBoundariesFromNodes.
+
+        Parameters
+        ----------
+        boundaryIndex : int
+            0-based index of the floor boundary.
+
+        Returns
+        -------
+        list of int
+            List of beam numbers in the boundary.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> beams = staad_obj.Geometry.GetFloorBoundaryBeamsByIndex(0)
+        >>> print(beams)
+        """
+        out_var, result_var = make_out_variant()
+        count = self._geometry.GetFloorBoundaryBeamsByIndex(boundaryIndex, out_var)
+        if count < 0:
+            raise_os_error_if_error_code(count)
+        if count == 0:
+            return []
+        return list(result_var.value)
+
+    def GetFloorBoundaryAreaByIndex(self, boundaryIndex: int):
+        """
+        Get the area of a specific floor boundary.
+
+        Must be called after IdentifyFloorBoundariesFromNodes.
+
+        Parameters
+        ----------
+        boundaryIndex : int
+            0-based index of the floor boundary.
+
+        Returns
+        -------
+        float
+            Area of the floor boundary in current base units.
+
+        Examples
+        --------
+        >>> from openstaadpy import os_analytical
+        >>> staad_obj = os_analytical.connect()
+        >>> area = staad_obj.Geometry.GetFloorBoundaryAreaByIndex(0)
+        >>> print(area)
+        """
+        out_var, result_var = make_out_variant()
+        result = self._geometry.GetFloorBoundaryAreaByIndex(boundaryIndex, out_var)
+        if result < 0:
+            raise_os_error_if_error_code(result)
+        return float(result_var.value)
