@@ -4334,7 +4334,7 @@ class OSLoad:
             varMZ_safe_list, automation.VT_ARRAY | automation.VT_R8
         )
         retVal = self._load.GetNodalLoads(
-            nodeCount, varFXList, varFYList, varFZList, varMXList, varMYList, varMZList
+            nNodeNo, varFXList, varFYList, varFZList, varMXList, varMYList, varMZList
         )
         if retVal < 0:
             raise_os_error_if_error_code(retVal)
