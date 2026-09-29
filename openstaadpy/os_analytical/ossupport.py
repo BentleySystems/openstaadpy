@@ -416,14 +416,14 @@ class OSSupport:
             raise OsErrorBase("Unable to remove support item", -1)
         return retVal
 
-    def GetSupportName(self, supportNo: int):
+    def GetSupportName(self, nodeNo: int):
         """
         Get support string name.
 
         Parameters
         ----------
-        supportNo : int
-            Support item number.
+        nodeNo : int
+            Node number.
 
         Returns
         -------
@@ -436,7 +436,7 @@ class OSSupport:
         >>> staad_obj = os_analytical.connect()
         >>> support_name = staad_obj.Support.GetSupportName(2)
         """
-        retVal = self._support.GetSupportName(supportNo)
+        retVal = self._support.GetSupportName(nodeNo)
         if not retVal:
             raise OsErrorBase("Unable to get support name", -1)
         return retVal
